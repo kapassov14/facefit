@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.api.serializers import report_public_dict
-from app.core.config import settings as env_settings
+from app.core.config import after_photo_feature_enabled, settings as env_settings
 from app.core.exceptions import not_found
 from app.db.crm import add_lead_event
 from app.db.models import ClientStatus, CtaClickEvent, GeneratedReport, ReportViewEvent
@@ -91,7 +91,7 @@ PUBLIC_REPORT_SHELL = """
 const token="__TOKEN__";
 const app=document.getElementById("app");
 const e=(v)=>String(v ?? "").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const src=(asset)=>asset?.path ? `/storage/${asset.path}` : (asset?.url || "");
+const src=(asset)=>asset?.url || (asset?.path ? `/api/media/${asset.path}` : "");
 const img=(asset,label,pending="Изображение формируется")=>src(asset)?`<img src="${e(src(asset))}" alt="${e(label)}">`:`<div class="image-placeholder">${e(pending)}</div>`;
 const list=(items)=>Array.isArray(items)&&items.length?items:["Мягкая зона внимания."];
 const cls=(s)=>s==="good"?"good":s==="priority"?"priority":"attention";
@@ -116,7 +116,7 @@ function render(r){
     <section class="section"><div class="summary-lead"><p class="lead">«Сильные стороны лица не надо исправлять. Их нужно раскрыть: через лимфу, шею, тонус и мягкую регулярность.»</p><div class="grid-3">${list(r.strengths).map(i=>`<article class="strength"><h4>${e(i)}</h4><p>Эта сторона лица уже работает как ресурс: на нее можно опереться, чтобы результат выглядел естественно.</p></article>`).join("")}</div></div></section>
     <section class="section"><div class="section-head"><span class="num">07</span><h2 class="section-title">Что даст фейсфитнес</h2></div><div class="benefits">${textItems(r.benefits,"Более свежий вид и мягкая поддержка овала лица.").map((i,n)=>`<article class="benefit"><span class="num">${n+1}</span><h4>Визуальный эффект</h4><p>${e(i)}</p></article>`).join("")}</div>${textOutro(r.benefits)?`<div class="summary-lead" style="margin-top:18px"><p class="lead">${e(textOutro(r.benefits))}</p></div>`:""}</section>
     <section class="section"><div class="section-head"><span class="num">08</span><h2 class="section-title">Прогноз по времени</h2></div><div class="timeline">${(r.forecast||[]).map(i=>`<div class="tl-item"><div class="tl-period">${e(i.period)}</div><div class="tl-card">${e(i.text)}</div></div>`).join("")}</div></section>
-    <section class="section"><div class="section-head"><span class="num">09</span><h2 class="section-title">After-photo</h2></div><div class="after-grid"><figure class="after-card"><div class="photo-frame">${img(r.images.original_photo,"Исходное фото")}</div><figcaption class="photo-caption">Исходное фото</figcaption></figure><figure class="after-card"><div class="photo-frame">${r.after_photo.state==="ready"?img(r.images.after_photo,"AI-визуализация"):img(null,"AI-визуализация",r.after_photo.message)}</div><figcaption class="photo-caption">AI-визуализация</figcaption></figure></div><p class="note">${e(r.after_photo.message)} Визуализация не является гарантией результата.</p></section>
+    ${r.after_photo?.state==="disabled"?"":`<section class="section"><div class="section-head"><span class="num">09</span><h2 class="section-title">After-photo</h2></div><div class="after-grid"><figure class="after-card"><div class="photo-frame">${img(r.images.original_photo,"Исходное фото")}</div><figcaption class="photo-caption">Исходное фото</figcaption></figure><figure class="after-card"><div class="photo-frame">${r.after_photo.state==="ready"?img(r.images.after_photo,"AI-визуализация"):img(null,"AI-визуализация",r.after_photo.message)}</div><figcaption class="photo-caption">AI-визуализация</figcaption></figure></div><p class="note">${e(r.after_photo.message)} Визуализация не является гарантией результата.</p></section>`}
     <section class="section"><div class="cta-block"><div><h3>Следующий шаг: персональная программа Bella Vladi</h3><p>Получите программу, которая опирается на ваши зоны внимания и сильные стороны лица.</p></div><button class="btn" onclick="ctaClick()">${e(r.cta.text)} →</button></div></section>
     <footer class="footer"><div class="brand">Bella Vladi</div><div>${e(r.disclaimer)}</div></footer>
   </main>`;
@@ -141,6 +141,8 @@ def public_report_page(token: str, request: Request, db: Session = Depends(get_d
     report.opened_count += 1
     if report.analysis and report.analysis.lead:
         report.analysis.lead.report_opened = True
+        if report.analysis.lead.crm_status not in {ClientStatus.CTA_CLICKED, ClientStatus.PAID, ClientStatus.BOUGHT}:
+            report.analysis.lead.crm_status = ClientStatus.REPORT_OPENED
         add_lead_event(db, report.analysis.lead, "report_opened", "Пользователь открыл отчет", {"report_id": report.id})
     db.add(
         ReportViewEvent(
@@ -175,7 +177,7 @@ def public_report_page(token: str, request: Request, db: Session = Depends(get_d
         analysis.legacy_protocol_image_path if analysis and analysis.protocol_version not in {"v2", "v3", "v4"} else None
     )
     protocol = _url(protocol_source)
-    after = _url((analysis.after_photo_final_path or analysis.after_photo_path) if analysis else None)
+    after = _url((analysis.after_photo_final_path or analysis.after_photo_path) if analysis and after_photo_feature_enabled() else None)
     cta_target = bot_settings.whatsapp_url or bot_settings.telegram_url or bot_settings.instagram_url or env_settings.public_app_url
     cta_url = f"{env_settings.backend_url.rstrip('/')}/report/{token}/cta" if env_settings.backend_url else f"/report/{token}/cta"
 
@@ -381,15 +383,6 @@ def public_report_page(token: str, request: Request, db: Session = Depends(get_d
   </section>
 
   <section class="card">
-    <h2>After-photo</h2>
-    <p>Возможная визуализация результата при регулярной работе 3 месяца. Не является гарантией результата.</p>
-    <div class="compare">
-      <figure>{_image(original, "До")}<figcaption>Исходное фото</figcaption></figure>
-      <figure>{_image(after, "Возможная визуализация после")}<figcaption>AI-визуализация 3 месяца регулярной работы</figcaption></figure>
-    </div>
-  </section>
-
-  <section class="card">
     <h2>Зоны внимания по типу кожи</h2>
     <ul>{attention_html}</ul>
   </section>
@@ -405,7 +398,7 @@ def public_report_page(token: str, request: Request, db: Session = Depends(get_d
 
 @router.get("/report/{token}/cta")
 def public_report_cta(token: str, request: Request, db: Session = Depends(get_db)):
-    report = db.query(GeneratedReport).filter(GeneratedReport.public_token == token).first()
+    report = db.query(GeneratedReport).filter(GeneratedReport.public_token == token, GeneratedReport.is_published.is_(True)).first()
     if not report:
         raise not_found("Отчет не найден")
     bot_settings = get_bot_settings(db)
@@ -413,7 +406,7 @@ def public_report_cta(token: str, request: Request, db: Session = Depends(get_db
     report.cta_click_count += 1
     if report.analysis and report.analysis.lead:
         report.analysis.lead.cta_clicked = True
-        report.analysis.lead.crm_status = ClientStatus.APPLIED
+        report.analysis.lead.crm_status = ClientStatus.CTA_CLICKED
         add_lead_event(db, report.analysis.lead, "cta_clicked", "Пользователь нажал CTA", {"report_id": report.id, "target_url": target})
     db.add(
         CtaClickEvent(

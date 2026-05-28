@@ -10,9 +10,10 @@ export function PromptTemplates() {
   const [selected, setSelected] = useState<any | null>(null);
   const [content, setContent] = useState("");
   useEffect(() => {
-    if (!selected && data?.items?.length) {
-      setSelected(data.items[0]);
-      setContent(data.items[0].content);
+    const items = (data?.items || []).filter((item: any) => !String(item.key || "").startsWith("after_photo"));
+    if ((!selected || String(selected.key || "").startsWith("after_photo")) && items.length) {
+      setSelected(items[0]);
+      setContent(items[0].content);
     }
   }, [data, selected]);
   const mutation = useMutation({
@@ -21,23 +22,25 @@ export function PromptTemplates() {
   });
   return (
     <div>
-      <SectionTitle title="Конструктор промптов" subtitle="System prompt, protocol/report prompts, after-photo и disclaimer" />
+      <SectionTitle title="Конструктор промптов" subtitle="System prompt, protocol/report prompts и disclaimer" />
       <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
         <Card>
           <div className="space-y-2">
-            {(data?.items || []).map((prompt: any) => (
-              <button
-                key={prompt.id}
-                onClick={() => {
-                  setSelected(prompt);
-                  setContent(prompt.content);
-                }}
-                className={`w-full rounded-card border p-3 text-left ${selected?.id === prompt.id ? "border-rose bg-pearl/70" : "border-pearl hover:bg-milk"}`}
-              >
-                <p className="font-semibold">{prompt.name}</p>
-                <p className="text-xs text-clay">{prompt.key}</p>
-              </button>
-            ))}
+            {(data?.items || [])
+              .filter((prompt: any) => !String(prompt.key || "").startsWith("after_photo"))
+              .map((prompt: any) => (
+                <button
+                  key={prompt.id}
+                  onClick={() => {
+                    setSelected(prompt);
+                    setContent(prompt.content);
+                  }}
+                  className={`w-full rounded-card border p-3 text-left ${selected?.id === prompt.id ? "border-rose bg-pearl/70" : "border-pearl hover:bg-milk"}`}
+                >
+                  <p className="font-semibold">{prompt.name}</p>
+                  <p className="text-xs text-clay">{prompt.key}</p>
+                </button>
+              ))}
           </div>
         </Card>
         <Card>
@@ -52,4 +55,3 @@ export function PromptTemplates() {
     </div>
   );
 }
-

@@ -95,6 +95,8 @@ services:
       - backend_storage:/app/storage
 
   worker_after_photo:
+    profiles:
+      - after-photo
     build:
       context: ./apps/backend
     env_file:

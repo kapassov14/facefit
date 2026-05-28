@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.core.config import AFTER_PHOTO_DISABLED_REASON, after_photo_feature_enabled
 from app.db.models import (
     AdminUser,
     AnalysisRequest,
@@ -152,8 +153,16 @@ def _asset(path: str | None) -> dict[str, str | None]:
     if not path:
         return {"path": None, "url": None}
     if path.startswith(("http://", "https://", "data:")):
-        return {"path": path, "url": path}
-    return {"path": path, "url": local_storage.public_url(path)}
+        return {"path": None, "url": path}
+    return {"path": None, "url": local_storage.public_url(path)}
+
+
+def _media_url(path: str | None) -> str | None:
+    if not path:
+        return None
+    if path.startswith(("http://", "https://", "data:")):
+        return path
+    return local_storage.public_url(path)
 
 
 def _score_percent(score: Any) -> int:
@@ -274,12 +283,14 @@ def report_view_model(report: GeneratedReport, settings: BotSettings) -> dict[st
     protocol_path = analysis.face_protocol_image_path if analysis and analysis.face_protocol_version == "final_v1" else None
     if not protocol_path and analysis:
         protocol_path = analysis.protocol_image_path or analysis.legacy_protocol_image_path
-    after_status = (analysis.after_photo_status if analysis else None) or "PENDING"
-    after_path = (analysis.after_photo_final_path or analysis.after_photo_path) if analysis else None
-    after_state = "ready" if after_path and after_status in {"APPROVED", "COMPLETED"} else "pending"
-    if after_status in {"FAILED", "SKIPPED_NO_API_KEY", "NEEDS_MANUAL_REVIEW"}:
+    after_enabled = after_photo_feature_enabled()
+    after_status = ((analysis.after_photo_status if analysis else None) or "PENDING") if after_enabled else "DISABLED"
+    after_path = (analysis.after_photo_final_path or analysis.after_photo_path) if analysis and after_enabled else None
+    after_state = "disabled" if not after_enabled else ("ready" if after_path and after_status in {"APPROVED", "COMPLETED"} else "pending")
+    if after_enabled and after_status in {"FAILED", "SKIPPED_NO_API_KEY", "NEEDS_MANUAL_REVIEW"}:
         after_state = "failed" if after_status == "FAILED" else "skipped"
     after_messages = {
+        "disabled": AFTER_PHOTO_DISABLED_REASON,
         "ready": "AI-визуализация готова.",
         "pending": "After-photo формируется отдельно и появится после генерации.",
         "failed": "After-photo не удалось сформировать. Основной протокол и отчет доступны.",
@@ -448,32 +459,33 @@ def lead_dict(lead: Lead, include_analyses: bool = False) -> dict:
 
 
 def analysis_dict(analysis: AnalysisRequest, compact: bool = False) -> dict:
+    after_enabled = after_photo_feature_enabled()
     data = {
         "id": analysis.id,
         "status": analysis.status,
         "selected_problems": analysis.selected_problems or [],
-        "original_photo_path": analysis.original_photo_path,
-        "protocol_image_path": analysis.protocol_image_path,
+        "original_photo_path": _media_url(analysis.original_photo_path),
+        "protocol_image_path": _media_url(analysis.protocol_image_path),
         "protocol_image_url": analysis.protocol_image_url,
         "protocol_version": analysis.protocol_version,
-        "protocol_slide_paths": analysis.protocol_slide_paths or [],
+        "protocol_slide_paths": [_media_url(path) for path in (analysis.protocol_slide_paths or []) if _media_url(path)],
         "protocol_slide_copy": analysis.protocol_slide_copy or {},
         "face_protocol_version": analysis.face_protocol_version,
-        "face_protocol_image_path": analysis.face_protocol_image_path,
+        "face_protocol_image_path": _media_url(analysis.face_protocol_image_path),
         "protocol_copy_json": analysis.protocol_copy_json or {},
         "personal_insight_json": analysis.personal_insight_json or {},
-        "legacy_protocol_image_path": analysis.legacy_protocol_image_path,
+        "legacy_protocol_image_path": _media_url(analysis.legacy_protocol_image_path),
         "legacy_protocol_image_url": analysis.legacy_protocol_image_url,
-        "after_photo_path": analysis.after_photo_path,
-        "after_photo_status": analysis.after_photo_status,
-        "after_photo_plan": analysis.after_photo_plan or {},
-        "after_photo_variants": analysis.after_photo_variants or [],
-        "after_photo_variant_paths": analysis.after_photo_variant_paths or [],
-        "after_photo_final_path": analysis.after_photo_final_path,
-        "after_photo_quality_results": analysis.after_photo_quality_results or [],
-        "after_photo_used_intensity": analysis.after_photo_used_intensity,
-        "after_photo_retry_count": analysis.after_photo_retry_count or 0,
-        "final_after_photo_path": analysis.after_photo_final_path or analysis.after_photo_path,
+        "after_photo_path": _media_url(analysis.after_photo_path) if after_enabled else None,
+        "after_photo_status": analysis.after_photo_status if after_enabled else "DISABLED",
+        "after_photo_plan": analysis.after_photo_plan if after_enabled else {"disabled": True, "reason": AFTER_PHOTO_DISABLED_REASON},
+        "after_photo_variants": (analysis.after_photo_variants or []) if after_enabled else [],
+        "after_photo_variant_paths": [_media_url(path) for path in (analysis.after_photo_variant_paths or []) if _media_url(path)] if after_enabled else [],
+        "after_photo_final_path": _media_url(analysis.after_photo_final_path) if after_enabled else None,
+        "after_photo_quality_results": (analysis.after_photo_quality_results or []) if after_enabled else [],
+        "after_photo_used_intensity": analysis.after_photo_used_intensity if after_enabled else None,
+        "after_photo_retry_count": (analysis.after_photo_retry_count or 0) if after_enabled else 0,
+        "final_after_photo_path": _media_url(analysis.after_photo_final_path or analysis.after_photo_path) if after_enabled else None,
         "moderation_status": analysis.moderation_status,
         "error_message": analysis.error_message,
         "created_at": analysis.created_at,
@@ -547,33 +559,33 @@ def report_public_dict(report: GeneratedReport, settings: BotSettings) -> dict:
             for path in [zone_protocol or analysis.face_protocol_image_path, *(analysis.protocol_slide_paths or [])]:
                 if path and path not in seen_protocols:
                     seen_protocols.add(path)
-                    protocol_slides.append(path)
+                    protocol_slides.append(_media_url(path) or path)
         elif analysis.protocol_version == "v4":
-            protocol_slides = analysis.protocol_slide_paths or []
+            protocol_slides = [_media_url(path) or path for path in (analysis.protocol_slide_paths or [])]
         else:
-            protocol_slides = analysis.protocol_slide_paths or []
+            protocol_slides = [_media_url(path) or path for path in (analysis.protocol_slide_paths or [])]
             image_slides = [
-                image.path
+                _media_url(image.path) or image.path
                 for image in sorted(analysis.images, key=lambda item: (item.metadata_json or {}).get("slide", item.id))
                 if image.kind == "protocol_slide" and image.path
             ]
             protocol_slides = protocol_slides or image_slides
     protocol = protocol_slides[0] if protocol_slides else (
-        analysis.legacy_protocol_image_path if analysis and analysis.protocol_version not in {"v2", "v3", "v4"} else None
+        _media_url(analysis.legacy_protocol_image_path) if analysis and analysis.protocol_version not in {"v2", "v3", "v4"} else None
     )
     return {
         "token": report.public_token,
         "view_model": view_model,
         "lead": {"name": view_model["user"]["name"]},
         "images": {
-            "original": analysis.original_photo_path if analysis else None,
-            "protocol": analysis.face_protocol_image_path if analysis and analysis.face_protocol_version == "final_v1" else protocol,
+            "original": _media_url(analysis.original_photo_path) if analysis else None,
+            "protocol": _media_url(analysis.face_protocol_image_path) if analysis and analysis.face_protocol_version == "final_v1" else protocol,
             "protocol_slides": protocol_slides,
             "protocol_version": analysis.face_protocol_version or analysis.protocol_version if analysis else None,
-            "face_protocol": analysis.face_protocol_image_path if analysis else None,
+            "face_protocol": _media_url(analysis.face_protocol_image_path) if analysis else None,
             "face_protocol_version": analysis.face_protocol_version if analysis else None,
-            "legacy_protocol": analysis.legacy_protocol_image_path if analysis else None,
-            "after": (analysis.after_photo_final_path or analysis.after_photo_path) if analysis else None,
+            "legacy_protocol": _media_url(analysis.legacy_protocol_image_path) if analysis else None,
+            "after": _media_url(analysis.after_photo_final_path or analysis.after_photo_path) if analysis and after_photo_feature_enabled() else None,
         },
         "cta": {
             **view_model["cta"],
@@ -629,31 +641,54 @@ def settings_dict(settings: BotSettings, ai_key_status: dict | None = None) -> d
         "instagram_url": settings.instagram_url,
         "whatsapp_url": settings.whatsapp_url,
         "telegram_url": settings.telegram_url,
-        "after_photo_enabled": settings.after_photo_enabled,
+        "after_photo_enabled": False,
         "manual_moderation_enabled": settings.manual_moderation_enabled,
         "regeneration_enabled": settings.regeneration_enabled,
         "analysis_limit_per_user": settings.analysis_limit_per_user,
         "problem_catalog": settings.problem_catalog or [],
-        "ai_settings": settings.ai_settings or {},
+        "ai_settings": {**(settings.ai_settings or {}), "enable_after_photo": False},
         "ai_key_status": ai_key_status or {},
     }
 
 
 def broadcast_dict(broadcast: Broadcast) -> dict:
+    recipients = broadcast.recipients or []
+    status_counts: dict[str, int] = {}
+    for recipient in recipients:
+        status_counts[recipient.status] = status_counts.get(recipient.status, 0) + 1
     return {
         "id": broadcast.id,
         "title": broadcast.title,
+        "base_id": broadcast.base_id,
+        "base": {"id": broadcast.base.id, "name": broadcast.base.name} if broadcast.base else None,
         "message_type": broadcast.message_type,
-        "text": broadcast.text,
+        "media_type": broadcast.media_type,
+        "text": broadcast.message_text or broadcast.text,
+        "message_text": broadcast.message_text or broadcast.text,
         "media_path": broadcast.media_path,
-        "buttons": broadcast.buttons or [],
+        "media_url": broadcast.media_url,
+        "buttons": broadcast.buttons_json or broadcast.buttons or [],
+        "buttons_json": broadcast.buttons_json or broadcast.buttons or [],
         "audience_filter": broadcast.audience_filter or {},
         "status": broadcast.status,
+        "scheduled_at": broadcast.scheduled_at,
+        "started_at": broadcast.started_at,
+        "completed_at": broadcast.completed_at,
         "sent_at": broadcast.sent_at,
+        "created_by": admin_dict(broadcast.created_by) if broadcast.created_by else None,
         "created_at": broadcast.created_at,
+        "rate_limit_per_second": broadcast.rate_limit_per_second,
+        "recipient_counts": status_counts,
         "recipients": [
-            {"id": item.id, "telegram_user_id": item.telegram_user_id, "status": item.status, "error_message": item.error_message}
-            for item in broadcast.recipients
+            {
+                "id": item.id,
+                "telegram_user_id": item.telegram_user_id,
+                "status": item.status,
+                "error_message": item.error_message,
+                "sent_at": item.sent_at or item.delivered_at,
+                "telegram_message_id": item.telegram_message_id,
+            }
+            for item in recipients[:100]
         ],
     }
 
@@ -679,9 +714,12 @@ def campaign_dict(campaign: CampaignSource) -> dict:
 def admin_dict(admin: AdminUser) -> dict:
     return {
         "id": admin.id,
+        "name": admin.name,
         "email": admin.email,
         "role": admin.role,
         "is_active": admin.is_active,
+        "can_broadcast": admin.can_broadcast,
+        "last_login_at": admin.last_login_at,
         "created_at": admin.created_at,
         "updated_at": admin.updated_at,
     }

@@ -13,7 +13,7 @@ from aiogram.types import FSInputFile
 
 from app.bot import funnel
 from app.bot.progress import get_progress_message, progress_text, should_apply_stage
-from app.core.config import settings
+from app.core.config import AFTER_PHOTO_DISABLED_REASON, after_photo_feature_enabled, settings
 from app.db.crm import add_lead_event
 from app.db.models import AiJobLog, AnalysisRequest, ClientStatus, EventLog, GeneratedImage, LeadEvent
 from app.db.session import SessionLocal
@@ -167,7 +167,7 @@ def _record_funnel_event(db, analysis: AnalysisRequest, event_type: str, title: 
 def _should_skip_sales_message(analysis: AnalysisRequest | None) -> bool:
     if not analysis or not analysis.telegram_user:
         return True
-    if analysis.lead and analysis.lead.crm_status == ClientStatus.BOUGHT:
+    if analysis.lead and analysis.lead.crm_status in {ClientStatus.PAID, ClientStatus.BOUGHT}:
         return True
     return False
 
@@ -298,6 +298,8 @@ def send_analysis_ready_message_task(self, analysis_id: int, report_url: str, fo
         )
         asyncio.run(_replace_progress_with_result(analysis.id, analysis.telegram_user.telegram_id, report_url))
         _record_funnel_event(db, analysis, "protocol_sent", "Пользователю отправлен персональный протокол")
+        if analysis.lead and analysis.lead.crm_status not in {ClientStatus.PAID, ClientStatus.BOUGHT}:
+            analysis.lead.crm_status = ClientStatus.PROTOCOL_SENT
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         db.add(
             AiJobLog(
@@ -309,7 +311,8 @@ def send_analysis_ready_message_task(self, analysis_id: int, report_url: str, fo
             )
         )
         db.commit()
-        enqueue_after_visual_offer(analysis.id)
+        if after_photo_feature_enabled():
+            enqueue_after_visual_offer(analysis.id)
     except Exception as exc:
         logger.exception("Telegram final protocol send failed")
         _log_job(analysis_id, "telegram_send", "failed", str(exc))
@@ -368,6 +371,9 @@ async def _edit_analysis_progress(chat_id: int, message_id: int, text: str) -> N
 
 @celery_app.task(name="app.workers.tasks_telegram.send_after_photo_message_task", bind=True)
 def send_after_photo_message_task(self, analysis_id: int) -> None:
+    if not after_photo_feature_enabled():
+        _log_job(analysis_id, "telegram_after_photo", "skipped", AFTER_PHOTO_DISABLED_REASON)
+        return
     db = SessionLocal()
     started = time.perf_counter()
     try:
@@ -395,11 +401,17 @@ def send_after_photo_message_task(self, analysis_id: int) -> None:
 
 @celery_app.task(name="app.workers.tasks_telegram.send_after_photo_pending_message_task", bind=True)
 def send_after_photo_pending_message_task(self, analysis_id: int) -> None:
+    if not after_photo_feature_enabled():
+        _log_job(analysis_id, "telegram_after_photo_pending", "skipped", AFTER_PHOTO_DISABLED_REASON)
+        return
     _send_after_photo_status_message(analysis_id, "pending")
 
 
 @celery_app.task(name="app.workers.tasks_telegram.send_after_photo_retry_message_task", bind=True)
 def send_after_photo_retry_message_task(self, analysis_id: int) -> None:
+    if not after_photo_feature_enabled():
+        _log_job(analysis_id, "telegram_after_photo_retry", "skipped", AFTER_PHOTO_DISABLED_REASON)
+        return
     _send_after_photo_status_message(analysis_id, "retry")
 
 
@@ -424,6 +436,9 @@ def _send_after_photo_status_message(analysis_id: int, kind: str) -> None:
 
 @celery_app.task(name="app.workers.tasks_telegram.send_after_visual_offer_task", bind=True)
 def send_after_visual_offer_task(self, analysis_id: int) -> None:
+    if not after_photo_feature_enabled():
+        _log_job(analysis_id, "funnel_after_visual_offer", "skipped", AFTER_PHOTO_DISABLED_REASON)
+        return
     db = SessionLocal()
     started = time.perf_counter()
     try:
@@ -534,18 +549,26 @@ def enqueue_analysis_progress_update(analysis_id: int, stage: str) -> None:
 
 
 def enqueue_after_photo_message(analysis_id: int) -> None:
+    if not after_photo_feature_enabled():
+        return
     send_after_photo_message_task.apply_async(args=[analysis_id], queue="telegram")
 
 
 def enqueue_after_photo_pending_message(analysis_id: int) -> None:
+    if not after_photo_feature_enabled():
+        return
     send_after_photo_pending_message_task.apply_async(args=[analysis_id], queue="telegram")
 
 
 def enqueue_after_photo_retry_message(analysis_id: int) -> None:
+    if not after_photo_feature_enabled():
+        return
     send_after_photo_retry_message_task.apply_async(args=[analysis_id], queue="telegram")
 
 
 def enqueue_after_visual_offer(analysis_id: int) -> None:
+    if not after_photo_feature_enabled():
+        return
     send_after_visual_offer_task.apply_async(args=[analysis_id], queue="telegram", countdown=funnel.AFTER_VISUAL_DELAY_SECONDS)
 
 

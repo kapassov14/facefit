@@ -10,10 +10,36 @@ from app.api.schemas import LeadPatch
 from app.api.serializers import lead_dict
 from app.core.exceptions import not_found
 from app.core.security import AdminAuth
-from app.db.models import Lead, TelegramUser
+from app.db.models import AnalysisRequest, Lead, TelegramUser
 from app.db.session import get_db
+from app.storage.local import local_storage
 
 router = APIRouter(prefix="/api/leads", tags=["leads"])
+
+
+def _analysis_storage_paths(lead: Lead) -> set[str]:
+    paths: set[str] = set()
+    for analysis in lead.analyses or []:
+        for path in [
+            analysis.original_photo_path,
+            analysis.protocol_image_path,
+            analysis.face_protocol_image_path,
+            analysis.legacy_protocol_image_path,
+            analysis.after_photo_path,
+            analysis.after_photo_final_path,
+        ]:
+            if path:
+                paths.add(path)
+        for path in analysis.protocol_slide_paths or []:
+            if path:
+                paths.add(path)
+        for path in analysis.after_photo_variant_paths or []:
+            if path:
+                paths.add(path)
+        for image in analysis.images or []:
+            if image.path:
+                paths.add(image.path)
+    return paths
 
 
 @router.get("")
@@ -93,12 +119,20 @@ def patch_lead(lead_id: int, payload: LeadPatch, _: AdminAuth, db: Session = Dep
 
 @router.delete("/{lead_id}")
 def delete_lead(lead_id: int, _: AdminAuth, db: Session = Depends(get_db)) -> dict:
-    lead = db.query(Lead).filter(Lead.id == lead_id).first()
+    lead = (
+        db.query(Lead)
+        .options(selectinload(Lead.analyses).selectinload(AnalysisRequest.images))
+        .filter(Lead.id == lead_id)
+        .first()
+    )
     if not lead:
         raise not_found("Лид не найден")
+    storage_paths = _analysis_storage_paths(lead)
     telegram_user = lead.telegram_user
     db.delete(lead)
     if telegram_user:
         db.delete(telegram_user)
     db.commit()
+    for path in storage_paths:
+        local_storage.delete_file(path)
     return {"ok": True}

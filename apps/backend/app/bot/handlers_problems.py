@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
@@ -30,7 +32,12 @@ async def choose_problem(callback: CallbackQuery, state: FSMContext) -> None:
             await callback.message.answer("Не нашла заявку. Пожалуйста, начните заново через /start.")
             await callback.answer()
             return
+        if analysis.telegram_user:
+            analysis.telegram_user.last_bot_interaction_at = datetime.now(timezone.utc)
         if slug == "done":
+            if analysis.status != AnalysisStatus.WAITING_FOR_PROBLEMS:
+                await callback.answer("Анализ уже поставлен в очередь", show_alert=True)
+                return
             titles = [title_by_slug(item, settings.problem_catalog or []) for item in selected]
             if not titles:
                 await callback.answer("Выберите хотя бы одну зону", show_alert=True)

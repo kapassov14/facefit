@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from app.bot.funnel import problems_prompt_text
 from app.bot.keyboards import problems_keyboard
 from app.bot.states import FaceProtocolStates
 from app.db.crm import add_lead_event
-from app.db.models import AnalysisRequest, AnalysisStatus, CampaignSource, TelegramUser
+from app.db.models import AnalysisRequest, AnalysisStatus, CampaignSource, ClientStatus, TelegramUser
 from app.db.repositories import get_bot_settings
 from app.db.session import SessionLocal
 from app.reports.face_zone_protocol.mediapipe_map import validate_face_photo
@@ -50,11 +51,12 @@ async def receive_photo(message: Message, state: FSMContext) -> None:
         if not user or not user.lead:
             await message.answer("Давайте начнем заново: нажмите /start.")
             return
+        user.last_bot_interaction_at = datetime.now(timezone.utc)
         analyses_count = db.query(AnalysisRequest).filter(AnalysisRequest.telegram_user_id == user.id).count()
         if analyses_count >= settings.analysis_limit_per_user:
             await message.answer("Лимит анализов для одного пользователя уже использован. Напишите эксперту, если нужен повторный протокол.")
             return
-        relative_path = f"photos/{user.telegram_id}_{int(datetime.now(timezone.utc).timestamp())}.jpg"
+        relative_path = f"photos/{secrets.token_urlsafe(24)}.jpg"
         local_storage.save_bytes(relative_path, data)
         photo_quality = validate_face_photo(local_storage.abs_path(relative_path))
         if not photo_quality.get("ok"):
@@ -73,6 +75,7 @@ async def receive_photo(message: Message, state: FSMContext) -> None:
         db.add(analysis)
         user.current_status = AnalysisStatus.WAITING_FOR_PROBLEMS
         user.lead.status = AnalysisStatus.WAITING_FOR_PROBLEMS
+        user.lead.crm_status = ClientStatus.PHOTO_SENT
         add_lead_event(db, user.lead, "photo_uploaded", "Пользователь отправил фото", {"path": relative_path})
         if user.campaign:
             campaign: CampaignSource = user.campaign

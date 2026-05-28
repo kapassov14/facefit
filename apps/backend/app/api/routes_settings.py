@@ -41,7 +41,14 @@ def get_settings(_: AdminAuth, db: Session = Depends(get_db)) -> dict:
 def patch_settings(payload: SettingsPatch, _: AdminAuth, db: Session = Depends(get_db)) -> dict:
     settings = get_bot_settings(db)
     for field, value in payload.model_dump(exclude_unset=True).items():
+        if field == "after_photo_enabled":
+            value = False
+        if field == "ai_settings" and isinstance(value, dict):
+            value = {**value, "enable_after_photo": False}
         setattr(settings, field, value)
+    settings.after_photo_enabled = False
+    if isinstance(settings.ai_settings, dict):
+        settings.ai_settings = {**settings.ai_settings, "enable_after_photo": False}
     db.commit()
     db.refresh(settings)
     return settings_dict(settings, _key_status())

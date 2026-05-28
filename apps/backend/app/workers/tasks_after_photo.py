@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from app.after_photo.prompt_builder import build_after_photo_prompt
-from app.core.config import settings
+from app.core.config import AFTER_PHOTO_DISABLED_REASON, after_photo_feature_enabled, settings
 from app.ai.providers import choose_image_provider_for_user, generate_after_photo_with_fallback
 from app.db.models import AnalysisRequest, BotSettings, GeneratedImage
 from app.db.session import SessionLocal
@@ -23,6 +23,29 @@ AFTER_PHOTO_FAILED = "FAILED"
 AFTER_PHOTO_SKIPPED_NO_API_KEY = "SKIPPED_NO_API_KEY"
 AFTER_PHOTO_PIPELINE = "structured_face_crop_qa_v1"
 AFTER_PHOTO_PROMPT_SOURCE = "analysis_zone_prompt_v1"
+
+
+def _mark_after_photo_disabled(db, analysis: AnalysisRequest) -> None:
+    analysis.after_photo_status = "DISABLED"
+    analysis.after_photo_path = None
+    analysis.after_photo_final_path = None
+    analysis.after_photo_variant_paths = []
+    analysis.after_photo_variants = []
+    analysis.after_photo_quality_results = []
+    analysis.after_photo_used_intensity = None
+    analysis.after_photo_retry_count = 0
+    analysis.after_photo_plan = {"disabled": True, "reason": AFTER_PHOTO_DISABLED_REASON}
+    image = (
+        db.query(GeneratedImage)
+        .filter(GeneratedImage.analysis_id == analysis.id, GeneratedImage.kind == "after_photo")
+        .order_by(GeneratedImage.id.desc())
+        .first()
+    )
+    if image:
+        image.status = "disabled"
+        image.path = None
+        image.metadata_json = {"disabled": True, "reason": AFTER_PHOTO_DISABLED_REASON}
+    log_job(db, analysis.id, "after_photo", "skipped", AFTER_PHOTO_DISABLED_REASON)
 
 
 def _preferred_intensity(db, explicit_intensity: str | None) -> str:
@@ -155,6 +178,9 @@ def _generate_after_photo(analysis_id: int, preferred_intensity: str | None = No
         analysis = db.query(AnalysisRequest).filter(AnalysisRequest.id == analysis_id).first()
         if not analysis or not analysis.original_photo_path:
             raise ValueError("Анализ не найден или нет исходного фото")
+        if not after_photo_feature_enabled():
+            _mark_after_photo_disabled(db, analysis)
+            return
 
         intensity = "visible"
         analysis_json = _wait_for_analysis_json(db, analysis)
@@ -278,7 +304,16 @@ def generate_after_photo_task(self, analysis_id: int, preferred_intensity: str |
     _generate_after_photo(analysis_id, preferred_intensity)
 
 
-def enqueue_after_photo(analysis_id: int, preferred_intensity: str | None = None, run_sync_fallback: bool = True) -> None:
+def enqueue_after_photo(analysis_id: int, preferred_intensity: str | None = None, run_sync_fallback: bool = False) -> None:
+    if not after_photo_feature_enabled():
+        db = SessionLocal()
+        try:
+            analysis = db.query(AnalysisRequest).filter(AnalysisRequest.id == analysis_id).first()
+            if analysis:
+                _mark_after_photo_disabled(db, analysis)
+        finally:
+            db.close()
+        return
     try:
         generate_after_photo_task.apply_async(args=[analysis_id, preferred_intensity], queue="after_photo")
     except Exception:

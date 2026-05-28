@@ -20,7 +20,8 @@ export const apiBase = API_BASE;
 export function storageUrl(path?: string | null) {
   if (!path) return "";
   if (path.startsWith("http")) return path;
-  return `${API_BASE}/storage/${path}`;
+  if (path.startsWith("/")) return `${API_BASE}${path}`;
+  return "";
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {

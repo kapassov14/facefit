@@ -21,27 +21,33 @@ import {
 
 import { Button } from "./ui";
 import { useAuthStore } from "../shared/authStore";
+import { apiRequest } from "../api/client";
+import { useQuery } from "@tanstack/react-query";
 
 const links = [
-  { to: "/admin/dashboard", label: "Dashboard", icon: Home },
-  { to: "/admin/crm", label: "CRM", icon: Users },
-  { to: "/admin/links", label: "Ссылки", icon: LinkIcon },
-  { to: "/admin/audiences", label: "Базы", icon: Database },
-  { to: "/admin/leads", label: "Лиды", icon: Users },
-  { to: "/admin/analysis", label: "Анализы", icon: Images },
-  { to: "/admin/ai-performance", label: "AI latency", icon: Gauge },
-  { to: "/admin/reports", label: "Отчеты", icon: FileText },
-  { to: "/admin/knowledge", label: "База знаний", icon: Brain },
-  { to: "/admin/prompts", label: "Промпты", icon: MessageSquareText },
-  { to: "/admin/broadcasts", label: "Рассылки", icon: Megaphone },
-  { to: "/admin/campaigns", label: "UTM", icon: Tags },
-  { to: "/admin/settings", label: "Настройки", icon: Settings },
-  { to: "/admin/managers", label: "Менеджеры", icon: ShieldCheck }
+  { to: "/admin/dashboard", label: "Dashboard", icon: Home, minRole: "viewer" },
+  { to: "/admin/crm", label: "CRM", icon: Users, minRole: "manager" },
+  { to: "/admin/bases", label: "Базы", icon: Database, minRole: "manager" },
+  { to: "/admin/broadcasts", label: "Рассылки", icon: Megaphone, minRole: "manager" },
+  { to: "/admin/leads", label: "Пользователи", icon: Users, minRole: "admin" },
+  { to: "/admin/analysis", label: "Анализы", icon: Images, minRole: "admin" },
+  { to: "/admin/reports", label: "Отчеты", icon: FileText, minRole: "admin" },
+  { to: "/admin/links", label: "Ссылки", icon: LinkIcon, minRole: "admin" },
+  { to: "/admin/ai-performance", label: "AI latency", icon: Gauge, minRole: "admin" },
+  { to: "/admin/campaigns", label: "UTM", icon: Tags, minRole: "admin" },
+  { to: "/admin/knowledge", label: "База знаний", icon: Brain, minRole: "owner" },
+  { to: "/admin/prompts", label: "Промпты", icon: MessageSquareText, minRole: "owner" },
+  { to: "/admin/settings", label: "Настройки", icon: Settings, minRole: "owner" },
+  { to: "/admin/managers", label: "Менеджеры", icon: ShieldCheck, minRole: "admin" }
 ];
+
+const roleLevels: Record<string, number> = { viewer: 0, manager: 1, admin: 2, owner: 3 };
 
 export function Layout() {
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => apiRequest<any>("/api/auth/me") });
+  const visibleLinks = links.filter((link) => (roleLevels[me?.role || "owner"] ?? 3) >= roleLevels[link.minRole]);
   return (
     <div className="min-h-screen bg-milk text-ink">
       <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-pearl bg-white/75 p-5 backdrop-blur lg:block">
@@ -55,7 +61,7 @@ export function Layout() {
           </div>
         </div>
         <nav className="mt-8 space-y-1">
-          {links.map((link) => {
+          {visibleLinks.map((link) => {
             const Icon = link.icon;
             return (
               <NavLink
@@ -78,7 +84,7 @@ export function Layout() {
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-pearl bg-milk/88 px-5 backdrop-blur">
           <div className="flex items-center gap-2 text-sm font-semibold text-clay">
             <Bot size={18} />
-            Production-ready MVP
+            {me?.name || me?.email || "Production-ready MVP"}
           </div>
           <Button
             variant="ghost"

@@ -331,7 +331,7 @@ def _asset_url(path: str | None) -> str:
         return ""
     if path.startswith(("http://", "https://", "data:")):
         return path
-    return f"/storage/{path.lstrip('/')}"
+    return local_storage.public_url(path)
 
 
 def _clamp_number(value: Any, fallback: int, minimum: int = 0, maximum: int = 100) -> int:

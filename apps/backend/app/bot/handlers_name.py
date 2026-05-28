@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
@@ -21,6 +23,7 @@ async def receive_name(message: Message, state: FSMContext) -> None:
     try:
         user = db.query(TelegramUser).filter(TelegramUser.telegram_id == message.from_user.id).first()
         if user and user.lead:
+            user.last_bot_interaction_at = datetime.now(timezone.utc)
             user.lead.name = name
             user.lead.status = AnalysisStatus.WAITING_FOR_AGE
             user.current_status = AnalysisStatus.WAITING_FOR_AGE
@@ -50,6 +53,7 @@ async def receive_age(message: Message, state: FSMContext) -> None:
         user = db.query(TelegramUser).filter(TelegramUser.telegram_id == message.from_user.id).first()
         name = user.lead.name if user and user.lead else None
         if user and user.lead:
+            user.last_bot_interaction_at = datetime.now(timezone.utc)
             user.lead.age = age
             user.lead.status = AnalysisStatus.WAITING_FOR_PHOTO
             user.current_status = AnalysisStatus.WAITING_FOR_PHOTO

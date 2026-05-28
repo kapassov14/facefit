@@ -43,5 +43,10 @@ def regenerate_report_task(self, analysis_id: int) -> None:
 def enqueue_report(analysis_id: int) -> None:
     try:
         regenerate_report_task.apply_async(args=[analysis_id], queue="report")
-    except Exception:
-        _regenerate_report(analysis_id)
+    except Exception as exc:
+        logger.exception("Celery broker unavailable; report regeneration was not started")
+        db = SessionLocal()
+        try:
+            log_job(db, analysis_id, "regenerate_report_enqueue", "failed", str(exc))
+        finally:
+            db.close()

@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import logging
 import hashlib
+import secrets
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
+from redis import Redis
+from redis.exceptions import RedisError
 
 from app.ai.openai_client import build_personal_insights_from_analysis
 from app.ai.prompts import load_default_system_prompt
 from app.ai.providers import analyze_face_with_fallback
 from app.ai.schemas import FaceAnalysis
-from app.core.config import settings
+from app.core.config import AFTER_PHOTO_DISABLED_REASON, after_photo_feature_enabled, settings
 from app.db.crm import add_lead_event
 from app.db.models import (
     AiJobLog,
@@ -47,6 +50,29 @@ AFTER_PHOTO_TERMINAL_STATUSES = {
     "SKIPPED_NO_API_KEY",
     "NEEDS_MANUAL_REVIEW",
 }
+PIPELINE_LOCK_SECONDS = max(900, settings.ai_timeout_seconds * 4)
+
+
+def _acquire_pipeline_lock(analysis_id: int) -> tuple[Redis | None, str | None, bool]:
+    token = secrets.token_urlsafe(16)
+    try:
+        client = Redis.from_url(settings.redis_url, decode_responses=True)
+        acquired = bool(client.set(f"analysis:pipeline:{analysis_id}:lock", token, nx=True, ex=PIPELINE_LOCK_SECONDS))
+        return client, token, acquired
+    except RedisError:
+        logger.warning("Redis pipeline lock unavailable; continuing without distributed lock", exc_info=True)
+        return None, None, True
+
+
+def _release_pipeline_lock(client: Redis | None, analysis_id: int, token: str | None) -> None:
+    if not client or not token:
+        return
+    key = f"analysis:pipeline:{analysis_id}:lock"
+    try:
+        if client.get(key) == token:
+            client.delete(key)
+    except RedisError:
+        logger.warning("Could not release pipeline lock", exc_info=True)
 
 
 def _enqueue_progress_update(analysis_id: int, stage: str) -> None:
@@ -309,6 +335,8 @@ def _wait_for_after_photo_for_protocol(db: Session, analysis: AnalysisRequest, *
 def _run_analysis_pipeline(analysis_id: int) -> None:
     db = SessionLocal()
     analysis: AnalysisRequest | None = None
+    lock_client: Redis | None = None
+    lock_token: str | None = None
     total_started = time.perf_counter()
     analysis_provider = None
     analysis_time_ms = 0
@@ -318,6 +346,17 @@ def _run_analysis_pipeline(analysis_id: int) -> None:
     try:
         analysis = db.query(AnalysisRequest).filter(AnalysisRequest.id == analysis_id).first()
         if not analysis:
+            return
+        lock_client, lock_token, lock_acquired = _acquire_pipeline_lock(analysis_id)
+        if not lock_acquired:
+            log_job(
+                db,
+                analysis.id,
+                "pipeline",
+                "skipped",
+                "Analysis pipeline is already running; duplicate task ignored",
+                {"reason": "pipeline_lock_exists"},
+            )
             return
         if not analysis.original_photo_path:
             raise ValueError("У анализа нет исходного фото")
@@ -364,31 +403,49 @@ def _run_analysis_pipeline(analysis_id: int) -> None:
         _enqueue_progress_update(analysis.id, "analysis")
 
         photo_abs = local_storage.abs_path(analysis.original_photo_path)
-        if bot_settings.after_photo_enabled and settings.enable_after_photo:
+        if bot_settings.after_photo_enabled and after_photo_feature_enabled():
             from app.workers.tasks_after_photo import enqueue_after_photo
 
             enqueue_after_photo(analysis.id, run_sync_fallback=False)
             after_photo_started = True
+        else:
+            analysis.after_photo_status = "DISABLED"
+            analysis.after_photo_path = None
+            analysis.after_photo_final_path = None
+            analysis.after_photo_variant_paths = []
+            analysis.after_photo_variants = []
+            analysis.after_photo_quality_results = []
+            analysis.after_photo_plan = {"disabled": True, "reason": AFTER_PHOTO_DISABLED_REASON}
+            log_job(db, analysis.id, "after_photo", "skipped", AFTER_PHOTO_DISABLED_REASON)
 
         knowledge_context = retrieve_context(db, analysis.selected_problems or [])
         system_prompt = get_prompt(db, "analysis_system", load_default_system_prompt())
-        analysis_result = analyze_face_with_fallback(
-            photo_abs,
-            analysis.lead.name if analysis.lead else None,
-            analysis.selected_problems or [],
-            knowledge_context,
-            system_prompt,
-            user_age=analysis.lead.age if analysis.lead else None,
-        )
-        analysis_provider = analysis_result.provider
-        analysis_time_ms = analysis_result.latency_ms
-        validation_meta = analysis_result.payload.get("_validation_meta") if isinstance(analysis_result.payload, dict) else {}
+        if analysis.analysis_json:
+            payload = dict(analysis.analysis_json)
+            analysis_provider = "cached"
+            analysis_time_ms = 0
+            fallback_used = False
+            log_job(db, analysis.id, "face_analysis", "skipped", "Reusing existing analysis_json for retry")
+        else:
+            analysis_result = analyze_face_with_fallback(
+                photo_abs,
+                analysis.lead.name if analysis.lead else None,
+                analysis.selected_problems or [],
+                knowledge_context,
+                system_prompt,
+                user_age=analysis.lead.age if analysis.lead else None,
+            )
+            payload = analysis_result.payload
+            analysis_provider = analysis_result.provider
+            analysis_time_ms = analysis_result.latency_ms
+            fallback_used = analysis_result.fallback_used
+        validation_meta = payload.get("_validation_meta") if isinstance(payload, dict) else {}
         validation_meta = validation_meta if isinstance(validation_meta, dict) else {}
-        bella_protocol = analysis_result.payload.get("bella_protocol") if isinstance(analysis_result.payload, dict) else None
-        bella_protocol_v4 = analysis_result.payload.get("bella_protocol_v4") if isinstance(analysis_result.payload, dict) else None
-        strict_blocks = analysis_result.payload.get("strict_blocks") if isinstance(analysis_result.payload, dict) else None
-        analysis_context = analysis_result.payload.get("analysis_context") if isinstance(analysis_result.payload, dict) else None
-        validated = FaceAnalysis.model_validate(analysis_result.payload).model_dump()
+        bella_protocol = payload.get("bella_protocol") if isinstance(payload, dict) else None
+        bella_protocol_v4 = payload.get("bella_protocol_v4") if isinstance(payload, dict) else None
+        strict_blocks = payload.get("strict_blocks") if isinstance(payload, dict) else None
+        analysis_context = payload.get("analysis_context") if isinstance(payload, dict) else None
+        validated = FaceAnalysis.model_validate(payload).model_dump()
         if bella_protocol:
             validated["bella_protocol"] = bella_protocol
         if bella_protocol_v4:
@@ -412,7 +469,7 @@ def _run_analysis_pipeline(analysis_id: int) -> None:
             {
                 "provider": analysis_provider,
                 "latencyMs": analysis_time_ms,
-                "fallbackUsed": analysis_result.fallback_used or bool(validation_meta.get("fallbackUsed")),
+                "fallbackUsed": fallback_used or bool(validation_meta.get("fallbackUsed")),
                 "mockMode": settings.ai_mock_mode,
                 "userId": analysis.telegram_user.telegram_id if analysis.telegram_user else None,
                 "photoHash": _photo_hash(photo_abs),
@@ -429,15 +486,21 @@ def _run_analysis_pipeline(analysis_id: int) -> None:
         _enqueue_progress_update(analysis.id, "protocol_copy")
         logger.info("FACE_PROTOCOL_RENDERER=journal_v1")
         try:
-            personal_insight_json = build_personal_insights_from_analysis(validated, analysis.selected_problems or [])
-            analysis.personal_insight_json = personal_insight_json
-            _user_age = analysis.lead.age if analysis.lead else None
-            protocol_copy_json = build_protocol_copy_from_analysis(validated, analysis.selected_problems or [], personal_insight_json, user_age=_user_age)
-            analysis.protocol_copy_json = protocol_copy_json
-            analysis.face_protocol_version = "final_v1"
-            analysis.protocol_version = "final_v1"
-            db.commit()
-            log_job(db, analysis.id, "protocol_copy", "success", "Protocol copy JSON built locally", {"source": "backend_template"})
+            if analysis.protocol_copy_json and analysis.personal_insight_json:
+                analysis.face_protocol_version = "final_v1"
+                analysis.protocol_version = "final_v1"
+                db.commit()
+                log_job(db, analysis.id, "protocol_copy", "skipped", "Reusing existing protocol copy JSON")
+            else:
+                personal_insight_json = build_personal_insights_from_analysis(validated, analysis.selected_problems or [])
+                analysis.personal_insight_json = personal_insight_json
+                _user_age = analysis.lead.age if analysis.lead else None
+                protocol_copy_json = build_protocol_copy_from_analysis(validated, analysis.selected_problems or [], personal_insight_json, user_age=_user_age)
+                analysis.protocol_copy_json = protocol_copy_json
+                analysis.face_protocol_version = "final_v1"
+                analysis.protocol_version = "final_v1"
+                db.commit()
+                log_job(db, analysis.id, "protocol_copy", "success", "Protocol copy JSON built locally", {"source": "backend_template"})
             after_photo_wait_result = {
                 "waited": False,
                 "embedded": False,
@@ -445,7 +508,14 @@ def _run_analysis_pipeline(analysis_id: int) -> None:
                 "status": analysis.after_photo_status,
             }
             _enqueue_progress_update(analysis.id, "render")
-            protocol_png_abs = regenerate_face_protocol_png_sync(db, analysis)
+            protocol_png_abs = None
+            if analysis.face_protocol_image_path:
+                existing_png_abs = local_storage.abs_path(analysis.face_protocol_image_path)
+                if Path(existing_png_abs).exists():
+                    protocol_png_abs = existing_png_abs
+                    log_job(db, analysis.id, "face_zone_protocol_v1", "skipped", "Reusing existing face protocol PNG")
+            if not protocol_png_abs:
+                protocol_png_abs = regenerate_face_protocol_png_sync(db, analysis)
             log_job(
                 db,
                 analysis.id,
@@ -602,6 +672,7 @@ def _run_analysis_pipeline(analysis_id: int) -> None:
         )
         raise
     finally:
+        _release_pipeline_lock(lock_client, analysis_id, lock_token)
         db.close()
 
 
@@ -619,6 +690,19 @@ def run_analysis_pipeline(self, analysis_id: int) -> None:
 def enqueue_analysis(analysis_id: int) -> None:
     try:
         run_analysis_pipeline.apply_async(args=[analysis_id], queue="analysis")
-    except Exception:
-        logger.warning("Celery broker unavailable, running analysis synchronously in current process")
-        _run_analysis_pipeline(analysis_id)
+    except Exception as exc:
+        logger.exception("Celery broker unavailable; analysis was not started")
+        db = SessionLocal()
+        try:
+            analysis = db.query(AnalysisRequest).filter(AnalysisRequest.id == analysis_id).first()
+            if analysis:
+                analysis.status = AnalysisStatus.FAILED
+                analysis.error_message = "Analysis queue unavailable; retry from admin when Redis/Celery is healthy"
+                if analysis.lead:
+                    analysis.lead.status = AnalysisStatus.FAILED
+                if analysis.telegram_user:
+                    analysis.telegram_user.current_status = AnalysisStatus.FAILED
+                db.commit()
+            log_job(db, analysis_id, "pipeline_enqueue", "failed", str(exc))
+        finally:
+            db.close()

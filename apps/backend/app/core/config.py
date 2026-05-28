@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlparse
 
 from pydantic import AnyHttpUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -78,7 +79,7 @@ class Settings(BaseSettings):
     celery_result_expires_seconds: int = 3600
     ai_force_mock: bool = False
     enable_gemini_fallback: bool = True
-    enable_after_photo: bool = True
+    enable_after_photo: bool = False
     face_protocol_version: str = "final_v1"
     protocol_single_image: bool = False
     protocol_image_provider: str = "openai"
@@ -95,7 +96,7 @@ class Settings(BaseSettings):
     after_photo_retry_count: int = 1
     after_photo_timeout_seconds: int = 300
     after_photo_min_visible_diff: float = 2.0
-    after_photo_accept_best_effort: bool = True
+    after_photo_accept_best_effort: bool = False
     mediapipe_face_landmarker_model_path: str | None = None
 
     def storage_root(self) -> Path:
@@ -117,3 +118,36 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
+
+AFTER_PHOTO_FEATURE_ENABLED = False
+AFTER_PHOTO_DISABLED_REASON = "After-photo disabled for MVP launch"
+
+
+def after_photo_feature_enabled() -> bool:
+    return AFTER_PHOTO_FEATURE_ENABLED and settings.enable_after_photo
+
+
+def _is_local_url(value: str | None) -> bool:
+    if not value:
+        return True
+    host = urlparse(value).hostname or ""
+    return host in {"", "localhost", "127.0.0.1", "0.0.0.0", "frontend", "backend"}
+
+
+def validate_production_settings() -> None:
+    public_deployment = not all(
+        _is_local_url(value)
+        for value in [settings.backend_url, settings.frontend_url, settings.public_app_url, settings.telegram_webhook_url]
+    )
+    if not public_deployment:
+        return
+    problems = []
+    if not settings.jwt_secret or settings.jwt_secret == "change-me" or len(settings.jwt_secret) < 32:
+        problems.append("JWT_SECRET must be a long random secret")
+    if settings.admin_password == "admin12345" or len(settings.admin_password) < 12:
+        problems.append("ADMIN_PASSWORD must be changed from the default")
+    if settings.admin_email == "admin@bellavladi.local":
+        problems.append("ADMIN_EMAIL must be changed from the local default")
+    if problems:
+        raise RuntimeError("Unsafe production settings: " + "; ".join(problems))

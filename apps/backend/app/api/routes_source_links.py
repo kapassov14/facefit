@@ -59,8 +59,8 @@ def _source_link_query(db: Session):
 def _link_metrics(db: Session, link: CampaignSource) -> dict[str, Any]:
     unique_users = db.query(func.count(func.distinct(Touchpoint.lead_id))).filter(Touchpoint.source_link_id == link.id).scalar() or 0
     new_users = db.query(Lead).filter(Lead.first_source_link_id == link.id).count()
-    applications = db.query(Lead).filter(Lead.first_source_link_id == link.id, Lead.crm_status == ClientStatus.APPLIED).count()
-    purchases = db.query(Lead).filter(Lead.first_source_link_id == link.id, Lead.crm_status == ClientStatus.BOUGHT).count()
+    applications = db.query(Lead).filter(Lead.first_source_link_id == link.id, Lead.crm_status.in_([ClientStatus.CTA_CLICKED, ClientStatus.APPLIED])).count()
+    purchases = db.query(Lead).filter(Lead.first_source_link_id == link.id, Lead.crm_status.in_([ClientStatus.PAID, ClientStatus.BOUGHT])).count()
     last_touch = db.query(func.max(Touchpoint.created_at)).filter(Touchpoint.source_link_id == link.id).scalar()
     clicks = link.clicks or db.query(Touchpoint).filter(Touchpoint.source_link_id == link.id).count()
     return {

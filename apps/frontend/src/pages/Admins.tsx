@@ -9,9 +9,14 @@ import { formatDate, statusLabel } from "./crmShared";
 
 type AdminUser = {
   id: number;
+  name?: string | null;
   email: string;
-  role: "owner" | "manager" | "viewer" | string;
+  role: "owner" | "admin" | "manager" | "viewer" | string;
   is_active: boolean;
+  can_broadcast?: boolean;
+  last_login_at?: string | null;
+  active_leads?: number;
+  processed_leads?: number;
 };
 
 type ManagerReportItem = {
@@ -55,16 +60,18 @@ function percent(value?: number) {
 
 export function Admins() {
   const qc = useQueryClient();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("manager");
+  const [canBroadcast, setCanBroadcast] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const periodQuery = reportQuery(dateFrom, dateTo);
 
   const { data } = useQuery<{ items: AdminUser[] }>({
-    queryKey: ["admins"],
-    queryFn: () => apiRequest("/api/admins")
+    queryKey: ["managers"],
+    queryFn: () => apiRequest("/api/admin/managers")
   });
   const { data: report } = useQuery<ManagerReport>({
     queryKey: ["manager-report", periodQuery],
@@ -76,24 +83,31 @@ export function Admins() {
   const activeManagers = useMemo(() => managers.filter((item) => item.is_active).length, [managers]);
 
   const create = useMutation({
-    mutationFn: () => apiRequest("/api/admins", { method: "POST", body: JSON.stringify({ email, password, role }) }),
+    mutationFn: () => apiRequest("/api/admin/managers", { method: "POST", body: JSON.stringify({ name, email, password, role, can_broadcast: canBroadcast }) }),
     onSuccess: () => {
+      setName("");
       setEmail("");
       setPassword("");
       setRole("manager");
+      setCanBroadcast(true);
       qc.invalidateQueries({ queryKey: ["admins"] });
+      qc.invalidateQueries({ queryKey: ["managers"] });
       qc.invalidateQueries({ queryKey: ["manager-report"] });
       qc.invalidateQueries({ queryKey: ["crm-options"] });
     }
   });
   const patch = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Record<string, unknown> }) =>
-      apiRequest(`/api/admins/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+      apiRequest(`/api/admin/managers/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admins"] });
+      qc.invalidateQueries({ queryKey: ["managers"] });
       qc.invalidateQueries({ queryKey: ["manager-report"] });
       qc.invalidateQueries({ queryKey: ["crm-options"] });
     }
+  });
+  const resetPassword = useMutation({
+    mutationFn: (id: number) => apiRequest(`/api/admin/managers/${id}/reset-password`, { method: "POST", body: JSON.stringify({ password: "manager12345" }) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["managers"] })
   });
 
   const statCards = [
@@ -137,10 +151,12 @@ export function Admins() {
             <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
           </div>
         </div>
-        <div className="grid gap-3 md:grid-cols-[1fr_180px_160px_auto]">
+        <div className="grid gap-3 md:grid-cols-[1fr_1fr_180px_160px_auto]">
+          <Input placeholder="имя менеджера" value={name} onChange={(event) => setName(event.target.value)} />
           <Input placeholder="email менеджера" value={email} onChange={(event) => setEmail(event.target.value)} />
           <Input placeholder="пароль" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
           <Select value={role} onChange={(event) => setRole(event.target.value)}>
+            <option value="admin">admin</option>
             <option value="manager">manager</option>
             <option value="owner">owner</option>
             <option value="viewer">viewer</option>
@@ -150,6 +166,10 @@ export function Admins() {
             Добавить
           </Button>
         </div>
+        <label className="mt-3 inline-flex items-center gap-2 text-sm text-clay">
+          <input type="checkbox" checked={canBroadcast} onChange={(event) => setCanBroadcast(event.target.checked)} />
+          Разрешить запуск рассылок
+        </label>
       </Card>
 
       <Card className="mb-5 overflow-hidden p-0">
@@ -188,11 +208,11 @@ export function Admins() {
                   </td>
                   <td className="p-3">
                     <div className="grid gap-1">
-                      <span>{statusLabel("waiting_reply")}: <b>{manager.waiting_reply}</b></span>
-                      <span>{statusLabel("in_progress")}: <b>{manager.in_progress}</b></span>
-                      <span>{statusLabel("warming")}: <b>{manager.warming}</b></span>
-                      <span>{statusLabel("applied")}: <b>{manager.applications}</b></span>
-                      <span>{statusLabel("bought")}: <b>{manager.purchases}</b></span>
+                      <span>{statusLabel("manual_contact")}: <b>{manager.waiting_reply}</b></span>
+                      <span>{statusLabel("in_dialog")}: <b>{manager.in_progress}</b></span>
+                      <span>{statusLabel("thinking")}: <b>{manager.warming}</b></span>
+                      <span>{statusLabel("cta_clicked")}: <b>{manager.applications}</b></span>
+                      <span>{statusLabel("paid")}: <b>{manager.purchases}</b></span>
                     </div>
                   </td>
                   <td className="p-3">
@@ -238,8 +258,10 @@ export function Admins() {
           <table className="w-full min-w-[780px] text-sm">
             <thead className="bg-pearl/60 text-left text-clay">
               <tr>
-                <th className="p-4">Email</th>
+                <th className="p-4">Менеджер</th>
                 <th className="p-4">Роль</th>
+                <th className="p-4">Рассылки</th>
+                <th className="p-4">Last login</th>
                 <th className="p-4">Статус</th>
                 <th className="p-4">Действия</th>
               </tr>
@@ -247,14 +269,26 @@ export function Admins() {
             <tbody>
               {(data?.items || []).map((admin) => (
                 <tr key={admin.id} className="border-t border-pearl">
-                  <td className="p-4 font-semibold">{admin.email}</td>
+                  <td className="p-4">
+                    <p className="font-semibold">{admin.name || admin.email}</p>
+                    <p className="text-xs text-clay">{admin.email}</p>
+                    <p className="text-xs text-clay">{admin.active_leads || 0} в работе · {admin.processed_leads || 0} обработано</p>
+                  </td>
                   <td className="p-4">
                     <Select className="max-w-44" value={admin.role} onChange={(event) => patch.mutate({ id: admin.id, payload: { role: event.target.value } })}>
                       <option value="owner">owner</option>
+                      <option value="admin">admin</option>
                       <option value="manager">manager</option>
                       <option value="viewer">viewer</option>
                     </Select>
                   </td>
+                  <td className="p-4">
+                    <label className="inline-flex items-center gap-2">
+                      <input type="checkbox" checked={Boolean(admin.can_broadcast)} onChange={(event) => patch.mutate({ id: admin.id, payload: { can_broadcast: event.target.checked } })} />
+                      allowed
+                    </label>
+                  </td>
+                  <td className="p-4 text-clay">{formatDate(admin.last_login_at)}</td>
                   <td className="p-4">
                     <Badge tone={admin.is_active ? "green" : "red"}>{admin.is_active ? "активен" : "отключен"}</Badge>
                   </td>
@@ -265,12 +299,15 @@ export function Admins() {
                     >
                       {admin.is_active ? "Отключить" : "Включить"}
                     </Button>
+                    <Button className="ml-2" variant="ghost" onClick={() => resetPassword.mutate(admin.id)}>
+                      Reset pass
+                    </Button>
                   </td>
                 </tr>
               ))}
               {!data?.items?.length ? (
                 <tr>
-                  <td className="p-8 text-center text-clay" colSpan={4}>Доступы не найдены</td>
+                  <td className="p-8 text-center text-clay" colSpan={6}>Доступы не найдены</td>
                 </tr>
               ) : null}
             </tbody>

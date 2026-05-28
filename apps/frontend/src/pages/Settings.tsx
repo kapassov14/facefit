@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { apiRequest } from "../api/client";
-import { Badge, Button, Card, Input, SectionTitle, Select, Textarea } from "../components/ui";
+import { Badge, Button, Card, Input, SectionTitle, Textarea } from "../components/ui";
 
 export function Settings() {
   const qc = useQueryClient();
@@ -16,11 +16,6 @@ export function Settings() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["settings"] })
   });
   const set = (key: string, value: any) => setForm((prev: any) => ({ ...prev, [key]: value }));
-  const setAi = (key: string, value: any) =>
-    setForm((prev: any) => ({
-      ...prev,
-      ai_settings: { ...(prev.ai_settings || {}), [key]: value }
-    }));
   return (
     <div>
       <SectionTitle title="Настройки" subtitle="Тексты бота, CTA, moderation, лимиты и статус AI ключей" />
@@ -49,7 +44,6 @@ export function Settings() {
             </div>
             <div className="flex flex-wrap gap-4">
               {[
-                ["after_photo_enabled", "After-photo"],
                 ["manual_moderation_enabled", "Ручная модерация"],
                 ["regeneration_enabled", "Повторная генерация"]
               ].map(([key, label]) => (
@@ -58,23 +52,6 @@ export function Settings() {
                   {label}
                 </label>
               ))}
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <label>
-                <span className="mb-1 block text-xs font-semibold text-clay">After-photo intensity</span>
-                <Select
-                  value={form.ai_settings?.after_photo_default_intensity || "balanced"}
-                  onChange={(event) => setAi("after_photo_default_intensity", event.target.value)}
-                >
-                  <option value="subtle">subtle</option>
-                  <option value="balanced">balanced</option>
-                  <option value="visible">visible</option>
-                </Select>
-              </label>
-              <label>
-                <span className="mb-1 block text-xs font-semibold text-clay">After-photo pipeline</span>
-                <Input value={form.ai_settings?.after_photo_pipeline || "universal_prompt_v1"} readOnly />
-              </label>
             </div>
             <Button onClick={() => mutation.mutate()}>Сохранить настройки</Button>
           </div>

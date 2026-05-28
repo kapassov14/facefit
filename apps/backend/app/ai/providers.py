@@ -8,7 +8,7 @@ from typing import Any, Protocol
 from app.after_photo.generator import generate_after_photo_final, image_provider_has_credentials
 from app.ai.gemini_client import analyze_face_with_gemini
 from app.ai.openai_client import analyze_face
-from app.core.config import settings
+from app.core.config import AFTER_PHOTO_DISABLED_REASON, after_photo_feature_enabled, settings
 
 
 class TextVisionProvider(Protocol):
@@ -212,6 +212,19 @@ def generate_after_photo_with_fallback(
     analysis_json: dict[str, Any] | None = None,
     selected_problems: list[str] | None = None,
 ) -> ProviderResult:
+    if not after_photo_feature_enabled():
+        return ProviderResult(
+            provider="disabled",
+            payload={
+                "status": "DISABLED",
+                "reason": AFTER_PHOTO_DISABLED_REASON,
+                "variant_paths": [],
+                "final_path": None,
+                "quality_results": [],
+            },
+            latency_ms=0,
+            fallback_used=False,
+        )
     preferred = choose_image_provider_for_user(user_key)
     provider_order = [preferred, "openai" if preferred == "gemini" else "gemini"]
     last_result: dict[str, Any] | None = None

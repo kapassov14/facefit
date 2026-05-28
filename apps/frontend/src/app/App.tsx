@@ -40,6 +40,7 @@ export function App() {
         <Route path="crm" element={<CRM />} />
         <Route path="crm/:id" element={<CrmLeadDetail />} />
         <Route path="links" element={<Links />} />
+        <Route path="bases" element={<Audiences />} />
         <Route path="audiences" element={<Audiences />} />
         <Route path="leads" element={<Leads />} />
         <Route path="leads/:id" element={<LeadDetail />} />

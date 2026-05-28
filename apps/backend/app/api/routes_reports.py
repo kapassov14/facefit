@@ -51,6 +51,8 @@ def get_public_report_html(token: str, request: Request, db: Session = Depends(g
     report.opened_count += 1
     if report.analysis and report.analysis.lead:
         report.analysis.lead.report_opened = True
+        if report.analysis.lead.crm_status not in {ClientStatus.CTA_CLICKED, ClientStatus.PAID, ClientStatus.BOUGHT}:
+            report.analysis.lead.crm_status = ClientStatus.REPORT_OPENED
         add_lead_event(db, report.analysis.lead, "report_opened", "Пользователь открыл отчет", {"report_id": report.id})
     db.add(
         ReportViewEvent(
@@ -65,12 +67,14 @@ def get_public_report_html(token: str, request: Request, db: Session = Depends(g
 
 @router.post("/{token}/view")
 def track_view(token: str, request: Request, db: Session = Depends(get_db)) -> dict:
-    report = db.query(GeneratedReport).filter(GeneratedReport.public_token == token).first()
+    report = db.query(GeneratedReport).filter(GeneratedReport.public_token == token, GeneratedReport.is_published.is_(True)).first()
     if not report:
         raise not_found("Отчет не найден")
     report.opened_count += 1
     if report.analysis and report.analysis.lead:
         report.analysis.lead.report_opened = True
+        if report.analysis.lead.crm_status not in {ClientStatus.CTA_CLICKED, ClientStatus.PAID, ClientStatus.BOUGHT}:
+            report.analysis.lead.crm_status = ClientStatus.REPORT_OPENED
         add_lead_event(db, report.analysis.lead, "report_opened", "Пользователь открыл отчет", {"report_id": report.id})
     db.add(
         ReportViewEvent(
@@ -85,7 +89,7 @@ def track_view(token: str, request: Request, db: Session = Depends(get_db)) -> d
 
 @router.post("/{token}/cta-click")
 def track_cta(token: str, request: Request, db: Session = Depends(get_db)) -> dict:
-    report = db.query(GeneratedReport).filter(GeneratedReport.public_token == token).first()
+    report = db.query(GeneratedReport).filter(GeneratedReport.public_token == token, GeneratedReport.is_published.is_(True)).first()
     if not report:
         raise not_found("Отчет не найден")
     settings: BotSettings = get_bot_settings(db)
@@ -93,7 +97,7 @@ def track_cta(token: str, request: Request, db: Session = Depends(get_db)) -> di
     report.cta_click_count += 1
     if report.analysis and report.analysis.lead:
         report.analysis.lead.cta_clicked = True
-        report.analysis.lead.crm_status = ClientStatus.APPLIED
+        report.analysis.lead.crm_status = ClientStatus.CTA_CLICKED
         add_lead_event(db, report.analysis.lead, "cta_clicked", "Пользователь нажал CTA", {"report_id": report.id, "target_url": target})
         if report.analysis.telegram_user and report.analysis.telegram_user.campaign:
             campaign: CampaignSource = report.analysis.telegram_user.campaign

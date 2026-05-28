@@ -40,12 +40,24 @@ class AnalysisStatus:
 
 class AdminRole:
     OWNER = "owner"
+    ADMIN = "admin"
     MANAGER = "manager"
     VIEWER = "viewer"
 
 
 class ClientStatus:
     NEW = "new"
+    PHOTO_SENT = "photo_sent"
+    PROTOCOL_SENT = "protocol_sent"
+    REPORT_OPENED = "report_opened"
+    CTA_CLICKED = "cta_clicked"
+    MANUAL_CONTACT = "manual_contact"
+    IN_DIALOG = "in_dialog"
+    THINKING = "thinking"
+    PAID = "paid"
+    NOT_RELEVANT = "not_relevant"
+    ARCHIVED = "archived"
+
     WARMING = "warming"
     APPLIED = "applied"
     WAITING_REPLY = "waiting_reply"
@@ -53,17 +65,19 @@ class ClientStatus:
     BOUGHT = "bought"
     REJECTED = "rejected"
     NO_ANSWER = "no_answer"
-    ARCHIVED = "archived"
 
 
 class AdminUser(Base, TimestampMixin):
     __tablename__ = "admin_users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(32), default=AdminRole.MANAGER)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    can_broadcast: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Audience(Base, TimestampMixin):
@@ -129,6 +143,13 @@ class TelegramUser(Base, TimestampMixin):
     rate_limit_counter: Mapped[int] = mapped_column(Integer, default=0)
     campaign_id: Mapped[int | None] = mapped_column(ForeignKey("campaign_sources.id", ondelete="SET NULL"), nullable=True)
     start_payload: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_blocked: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    unsubscribed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_bot_interaction_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_message_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_message_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     campaign: Mapped[CampaignSource | None] = relationship(back_populates="telegram_users")
     lead: Mapped["Lead | None"] = relationship(back_populates="telegram_user", cascade="all, delete-orphan")
@@ -156,6 +177,8 @@ class Lead(Base, TimestampMixin):
     last_source_link_id: Mapped[int | None] = mapped_column(ForeignKey("campaign_sources.id", ondelete="SET NULL"), nullable=True)
     audience_id: Mapped[int | None] = mapped_column(ForeignKey("audiences.id", ondelete="SET NULL"), nullable=True)
     assigned_manager_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    assigned_by_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
     last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     telegram_user: Mapped[TelegramUser] = relationship(back_populates="lead")
@@ -163,11 +186,15 @@ class Lead(Base, TimestampMixin):
     notes: Mapped[list["AdminNote"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
     audience: Mapped[Audience | None] = relationship(back_populates="leads")
     assigned_manager: Mapped[AdminUser | None] = relationship(foreign_keys=[assigned_manager_id])
+    assigned_by: Mapped[AdminUser | None] = relationship(foreign_keys=[assigned_by_id])
     first_source_link: Mapped[CampaignSource | None] = relationship(foreign_keys=[first_source_link_id])
     last_source_link: Mapped[CampaignSource | None] = relationship(foreign_keys=[last_source_link_id])
     tag_links: Mapped[list["LeadTag"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
     events: Mapped[list["LeadEvent"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
+    activities: Mapped[list["LeadActivity"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
     touchpoints: Mapped[list["Touchpoint"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
+    tasks: Mapped[list["LeadTask"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
+    base_memberships: Mapped[list["AudienceBaseMember"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
 
 
 class LeadTag(Base):
@@ -195,6 +222,69 @@ class LeadEvent(Base):
 
     lead: Mapped[Lead] = relationship(back_populates="events")
     created_by: Mapped[AdminUser | None] = relationship()
+
+
+class LeadActivity(Base, TimestampMixin):
+    __tablename__ = "lead_activities"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    lead_id: Mapped[int] = mapped_column(ForeignKey("leads.id", ondelete="CASCADE"), index=True)
+    actor_type: Mapped[str] = mapped_column(String(32), default="system", index=True)
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    event_type: Mapped[str] = mapped_column(String(120), index=True)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+    lead: Mapped[Lead] = relationship(back_populates="activities")
+    actor: Mapped[AdminUser | None] = relationship()
+
+
+class LeadTask(Base, TimestampMixin):
+    __tablename__ = "lead_tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    lead_id: Mapped[int] = mapped_column(ForeignKey("leads.id", ondelete="CASCADE"), index=True)
+    assigned_to_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True, index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(32), default="todo", index=True)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    lead: Mapped[Lead] = relationship(back_populates="tasks")
+    assigned_to: Mapped[AdminUser | None] = relationship(foreign_keys=[assigned_to_id])
+    created_by: Mapped[AdminUser | None] = relationship(foreign_keys=[created_by_id])
+
+
+class AudienceBase(Base, TimestampMixin):
+    __tablename__ = "audience_bases"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    type: Mapped[str] = mapped_column(String(32), default="static", index=True)
+    filters_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+
+    created_by: Mapped[AdminUser | None] = relationship()
+    members: Mapped[list["AudienceBaseMember"]] = relationship(back_populates="base", cascade="all, delete-orphan")
+
+
+class AudienceBaseMember(Base):
+    __tablename__ = "audience_base_members"
+    __table_args__ = (UniqueConstraint("base_id", "lead_id", name="uq_audience_base_members_base_lead"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    base_id: Mapped[int] = mapped_column(ForeignKey("audience_bases.id", ondelete="CASCADE"), index=True)
+    lead_id: Mapped[int] = mapped_column(ForeignKey("leads.id", ondelete="CASCADE"), index=True)
+    telegram_user_id: Mapped[int | None] = mapped_column(ForeignKey("telegram_users.id", ondelete="CASCADE"), nullable=True, index=True)
+    added_by_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    base: Mapped[AudienceBase] = relationship(back_populates="members")
+    lead: Mapped[Lead] = relationship(back_populates="base_memberships")
+    telegram_user: Mapped[TelegramUser | None] = relationship()
+    added_by: Mapped[AdminUser | None] = relationship()
 
 
 class Touchpoint(Base):
@@ -379,14 +469,26 @@ class Broadcast(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255))
+    base_id: Mapped[int | None] = mapped_column(ForeignKey("audience_bases.id", ondelete="SET NULL"), nullable=True, index=True)
     message_type: Mapped[str] = mapped_column(String(64), default="text")
+    media_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    message_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     media_path: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    media_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     buttons: Mapped[list[dict[str, str]]] = mapped_column(JSON, default=list)
+    buttons_json: Mapped[list[dict[str, str]]] = mapped_column(JSON, default=list)
     audience_filter: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    status: Mapped[str] = mapped_column(String(64), default="draft")
+    status: Mapped[str] = mapped_column(String(64), default="draft", index=True)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    rate_limit_per_second: Mapped[int] = mapped_column(Integer, default=10)
 
+    base: Mapped[AudienceBase | None] = relationship()
+    created_by: Mapped[AdminUser | None] = relationship()
     recipients: Mapped[list["BroadcastRecipient"]] = relationship(back_populates="broadcast", cascade="all, delete-orphan")
 
 
@@ -396,11 +498,14 @@ class BroadcastRecipient(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     broadcast_id: Mapped[int] = mapped_column(ForeignKey("broadcasts.id", ondelete="CASCADE"), index=True)
     telegram_user_id: Mapped[int] = mapped_column(ForeignKey("telegram_users.id", ondelete="CASCADE"), index=True)
-    status: Mapped[str] = mapped_column(String(64), default="pending")
+    status: Mapped[str] = mapped_column(String(64), default="pending", index=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    telegram_message_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     broadcast: Mapped[Broadcast] = relationship(back_populates="recipients")
+    telegram_user: Mapped[TelegramUser] = relationship()
 
 
 class EventLog(Base, TimestampMixin):

@@ -1,17 +1,13 @@
-import shutil
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.schemas import AfterPhotoApproveVariant, ReviewPatch
+from app.api.schemas import ReviewPatch
 from app.api.serializers import analysis_dict
+from app.core.config import AFTER_PHOTO_DISABLED_REASON
 from app.core.exceptions import not_found
 from app.core.security import AdminAuth
 from app.db.models import AnalysisRequest, AnalysisStatus
 from app.db.session import get_db
-from app.storage.local import local_storage
-from app.workers.tasks_after_photo import enqueue_after_photo
 from app.workers.tasks_analysis import (
     enqueue_analysis,
     regenerate_face_protocol_png_sync,
@@ -21,6 +17,10 @@ from app.workers.tasks_analysis import (
 from app.workers.tasks_report import enqueue_report
 
 router = APIRouter(prefix="/api/analysis", tags=["analysis"])
+
+
+def _after_photo_disabled_response() -> dict:
+    return {"ok": False, "status": "DISABLED", "message": AFTER_PHOTO_DISABLED_REASON}
 
 
 @router.get("")
@@ -115,9 +115,7 @@ def regenerate_after_photo(
 ) -> dict:
     if not db.query(AnalysisRequest.id).filter(AnalysisRequest.id == analysis_id).first():
         raise not_found("Анализ не найден")
-    preferred = intensity if intensity in {"subtle", "balanced", "visible"} else None
-    enqueue_after_photo(analysis_id, preferred)
-    return {"ok": True, "intensity": preferred}
+    return _after_photo_disabled_response()
 
 
 @router.post("/{analysis_id}/regenerate-after-photo/{intensity}")
@@ -126,49 +124,25 @@ def regenerate_after_photo_with_intensity(analysis_id: int, intensity: str, _: A
         raise not_found("Intensity preset не найден")
     if not db.query(AnalysisRequest.id).filter(AnalysisRequest.id == analysis_id).first():
         raise not_found("Анализ не найден")
-    enqueue_after_photo(analysis_id, intensity)
-    return {"ok": True, "intensity": intensity}
+    return _after_photo_disabled_response()
 
 
 @router.post("/{analysis_id}/after-photo/approve-variant")
 def approve_after_photo_variant(
     analysis_id: int,
-    payload: AfterPhotoApproveVariant,
     _: AdminAuth,
     db: Session = Depends(get_db),
 ) -> dict:
-    analysis = db.query(AnalysisRequest).filter(AnalysisRequest.id == analysis_id).first()
-    if not analysis:
+    if not db.query(AnalysisRequest.id).filter(AnalysisRequest.id == analysis_id).first():
         raise not_found("Анализ не найден")
-    variant_path = payload.variant_path.strip()
-    variant_paths = analysis.after_photo_variant_paths or []
-    if variant_path not in variant_paths:
-        raise not_found("Вариант after-photo не найден в этой заявке")
-    source_abs = local_storage.abs_path(variant_path)
-    if not Path(source_abs).exists():
-        raise not_found("Файл варианта after-photo не найден")
-    final_rel = f"after_photos/{analysis.id}/after_photo_{analysis.id}_final.png"
-    final_abs = local_storage.abs_path(final_rel)
-    Path(final_abs).parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source_abs, final_abs)
-    analysis.after_photo_status = "APPROVED"
-    analysis.after_photo_final_path = final_rel
-    analysis.after_photo_path = final_rel
-    db.commit()
-    db.refresh(analysis)
-    return analysis_dict(analysis)
+    return _after_photo_disabled_response()
 
 
 @router.post("/{analysis_id}/after-photo/needs-manual-review")
 def mark_after_photo_needs_manual_review(analysis_id: int, _: AdminAuth, db: Session = Depends(get_db)) -> dict:
-    analysis = db.query(AnalysisRequest).filter(AnalysisRequest.id == analysis_id).first()
-    if not analysis:
+    if not db.query(AnalysisRequest.id).filter(AnalysisRequest.id == analysis_id).first():
         raise not_found("Анализ не найден")
-    analysis.after_photo_status = "NEEDS_MANUAL_REVIEW"
-    analysis.after_photo_path = None
-    db.commit()
-    db.refresh(analysis)
-    return analysis_dict(analysis)
+    return _after_photo_disabled_response()
 
 
 @router.patch("/{analysis_id}/review")

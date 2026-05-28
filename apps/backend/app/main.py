@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from app.api import (
     routes_analysis,
@@ -8,12 +7,14 @@ from app.api import (
     routes_audiences,
     routes_ai_performance,
     routes_auth,
+    routes_bases,
     routes_broadcasts,
     routes_campaigns,
     routes_crm,
     routes_dashboard,
     routes_knowledge,
     routes_leads,
+    routes_media,
     routes_prompts,
     routes_public,
     routes_reports,
@@ -21,11 +22,12 @@ from app.api import (
     routes_source_links,
     routes_telegram,
 )
-from app.core.config import settings
+from app.core.config import settings, validate_production_settings
 from app.core.logging import configure_logging
 from app.bot.webhook import setup_telegram_webhook
 
 configure_logging()
+validate_production_settings()
 
 app = FastAPI(title="Bella Vladi Face Protocol API", version="0.1.0")
 
@@ -46,22 +48,26 @@ app.add_middleware(
 )
 
 settings.storage_root().mkdir(parents=True, exist_ok=True)
-app.mount("/storage", StaticFiles(directory=str(settings.storage_root())), name="storage")
 
 app.include_router(routes_auth.router)
 app.include_router(routes_admins.router)
+app.include_router(routes_admins.manager_router)
 app.include_router(routes_crm.router)
+app.include_router(routes_bases.router)
 app.include_router(routes_source_links.router)
 app.include_router(routes_audiences.router)
 app.include_router(routes_ai_performance.router)
 app.include_router(routes_dashboard.router)
+app.include_router(routes_dashboard.admin_router)
 app.include_router(routes_leads.router)
+app.include_router(routes_media.router)
 app.include_router(routes_analysis.router)
 app.include_router(routes_reports.router)
 app.include_router(routes_public.router)
 app.include_router(routes_knowledge.router)
 app.include_router(routes_prompts.router)
 app.include_router(routes_broadcasts.router)
+app.include_router(routes_broadcasts.admin_router)
 app.include_router(routes_campaigns.router)
 app.include_router(routes_settings.router)
 app.include_router(routes_telegram.router)

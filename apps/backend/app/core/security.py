@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.models import AdminUser
+from app.db.models import AdminRole, AdminUser
 from app.db.session import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -53,3 +53,36 @@ def get_current_admin(
 
 AdminAuth = Annotated[AdminUser, Depends(get_current_admin)]
 
+
+ROLE_LEVELS = {
+    AdminRole.VIEWER: 0,
+    AdminRole.MANAGER: 1,
+    AdminRole.ADMIN: 2,
+    AdminRole.OWNER: 3,
+}
+
+
+def role_level(role: str | None) -> int:
+    return ROLE_LEVELS.get(role or "", -1)
+
+
+def require_roles(admin: AdminUser, *roles: str) -> None:
+    if admin.role not in roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
+
+
+def require_min_role(admin: AdminUser, min_role: str) -> None:
+    if role_level(admin.role) < role_level(min_role):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
+
+
+def require_write_access(admin: AdminUser) -> None:
+    require_min_role(admin, AdminRole.MANAGER)
+
+
+def require_admin_access(admin: AdminUser) -> None:
+    require_min_role(admin, AdminRole.ADMIN)
+
+
+def require_owner(admin: AdminUser) -> None:
+    require_roles(admin, AdminRole.OWNER)

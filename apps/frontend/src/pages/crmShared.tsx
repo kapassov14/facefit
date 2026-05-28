@@ -1,14 +1,16 @@
 import { Badge } from "../components/ui";
 
 export const CRM_STATUSES = [
-  { value: "new", label: "Новый" },
-  { value: "warming", label: "В прогреве" },
-  { value: "applied", label: "Оставил заявку" },
-  { value: "waiting_reply", label: "Ждет ответа" },
-  { value: "in_progress", label: "В работе" },
-  { value: "bought", label: "Купил" },
-  { value: "rejected", label: "Отказ" },
-  { value: "no_answer", label: "Не отвечает" },
+  { value: "new", label: "Новый лид" },
+  { value: "photo_sent", label: "Отправил фото" },
+  { value: "protocol_sent", label: "Получил протокол" },
+  { value: "report_opened", label: "Открыл отчет" },
+  { value: "cta_clicked", label: "Нажал CTA" },
+  { value: "manual_contact", label: "Написать вручную" },
+  { value: "in_dialog", label: "В диалоге" },
+  { value: "thinking", label: "Думает" },
+  { value: "paid", label: "Оплатил" },
+  { value: "not_relevant", label: "Не актуально" },
   { value: "archived", label: "Архив" }
 ];
 
@@ -17,9 +19,9 @@ export function statusLabel(value?: string) {
 }
 
 export function statusTone(value?: string): "green" | "yellow" | "red" | "neutral" {
-  if (value === "bought") return "green";
-  if (value === "applied" || value === "waiting_reply" || value === "in_progress") return "yellow";
-  if (value === "rejected" || value === "no_answer" || value === "archived") return "red";
+  if (value === "paid") return "green";
+  if (value === "cta_clicked" || value === "manual_contact" || value === "in_dialog" || value === "thinking") return "yellow";
+  if (value === "not_relevant" || value === "archived") return "red";
   return "neutral";
 }
 

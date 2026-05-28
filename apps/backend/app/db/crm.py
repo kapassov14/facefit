@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.db.models import CampaignSource, Lead, LeadEvent, LeadTag, Tag, Touchpoint
+from app.db.models import CampaignSource, Lead, LeadActivity, LeadEvent, LeadTag, Tag, Touchpoint
 
 
 def touch_lead(lead: Lead) -> None:
@@ -30,6 +30,15 @@ def add_lead_event(
             title=title,
             metadata_json=metadata or {},
             created_by_id=admin_id,
+        )
+    )
+    db.add(
+        LeadActivity(
+            lead_id=lead.id,
+            actor_type="manager" if admin_id else "system",
+            actor_id=admin_id,
+            event_type=event_type,
+            payload_json={"title": title, **(metadata or {})},
         )
     )
     touch_lead(lead)

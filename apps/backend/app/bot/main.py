@@ -9,7 +9,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
 
-from app.bot import handlers_consent, handlers_funnel, handlers_name, handlers_photo, handlers_problems, handlers_start
+from app.bot import handlers_consent, handlers_funnel, handlers_name, handlers_photo, handlers_problems, handlers_start, handlers_stop
 from app.bot.webhook import delete_telegram_webhook_for_polling, setup_telegram_webhook
 from app.core.config import settings
 from app.core.logging import configure_logging
@@ -24,6 +24,7 @@ def build_dispatcher() -> Dispatcher:
     storage = RedisStorage.from_url(settings.redis_url) if settings.redis_url else MemoryStorage()
     dp = Dispatcher(storage=storage)
     dp.include_router(handlers_start.router)
+    dp.include_router(handlers_stop.router)
     dp.include_router(handlers_consent.router)
     dp.include_router(handlers_name.router)
     dp.include_router(handlers_photo.router)

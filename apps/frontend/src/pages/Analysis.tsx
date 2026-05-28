@@ -9,7 +9,7 @@ export function Analysis() {
   const { data } = useQuery({ queryKey: ["analysis"], queryFn: () => apiRequest<any>("/api/analysis") });
   return (
     <div>
-      <SectionTitle title="Заявки / Анализы" subtitle="Исходные фото, JSON, протоколы, отчеты, after-photo и AI-логи" />
+      <SectionTitle title="Заявки / Анализы" subtitle="Исходные фото, JSON, протоколы, отчеты и AI-логи" />
       <div className="grid gap-4">
         {(data?.items || []).map((item: any) => (
           <Link key={item.id} to={`/admin/analysis/${item.id}`}>
@@ -28,4 +28,3 @@ export function Analysis() {
     </div>
   );
 }
-

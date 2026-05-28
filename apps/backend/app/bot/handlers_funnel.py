@@ -44,11 +44,11 @@ def _record_click(db, analysis: AnalysisRequest | None, event_type: str, title: 
     if analysis.lead:
         touch_lead(analysis.lead)
         if event_type in {"training_requested", "course_more_clicked", "bonuses_clicked"} and analysis.lead.crm_status == ClientStatus.NEW:
-            analysis.lead.crm_status = ClientStatus.WARMING
+            analysis.lead.crm_status = ClientStatus.THINKING
         if event_type == "questions_clicked":
-            analysis.lead.crm_status = ClientStatus.WAITING_REPLY
-        if event_type in {"course_buy_clicked", "installment_clicked"} and analysis.lead.crm_status != ClientStatus.BOUGHT:
-            analysis.lead.crm_status = ClientStatus.APPLIED
+            analysis.lead.crm_status = ClientStatus.MANUAL_CONTACT
+        if event_type in {"course_buy_clicked", "installment_clicked"} and analysis.lead.crm_status not in {ClientStatus.PAID, ClientStatus.BOUGHT}:
+            analysis.lead.crm_status = ClientStatus.CTA_CLICKED
         add_lead_event(db, analysis.lead, event_type, title, {"analysis_id": analysis.id})
     if analysis.telegram_user and analysis.telegram_user.campaign and event_type in {"course_buy_clicked", "installment_clicked"}:
         analysis.telegram_user.campaign.cta_clicks += 1

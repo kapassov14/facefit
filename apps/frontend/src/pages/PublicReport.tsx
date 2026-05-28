@@ -20,7 +20,7 @@ const MAP_POINTS = [
 function assetUrl(asset?: Asset | string | null) {
   if (!asset) return "";
   if (typeof asset === "string") return storageUrl(asset);
-  return storageUrl(asset.path) || asset.url || "";
+  return asset.url || storageUrl(asset.path) || "";
 }
 
 function statusClass(status?: string) {
@@ -435,14 +435,16 @@ export function PublicReport() {
             </div>
           </section>
 
-          <section className="section">
-            <div className="section-head"><span className="num">09</span><h2 className="section-title">After-photo</h2></div>
-            <div className="after-grid">
-              <PhotoFrame asset={report.images.original_photo} label="Исходное фото" />
-              <PhotoFrame asset={report.after_photo.state === "ready" ? report.images.after_photo : null} label="AI-визуализация" pendingText={report.after_photo.message} />
-            </div>
-            <p className="after-note">{report.after_photo.message} Визуализация не является гарантией результата.</p>
-          </section>
+          {report.after_photo?.state !== "disabled" ? (
+            <section className="section">
+              <div className="section-head"><span className="num">09</span><h2 className="section-title">After-photo</h2></div>
+              <div className="after-grid">
+                <PhotoFrame asset={report.images.original_photo} label="Исходное фото" />
+                <PhotoFrame asset={report.after_photo.state === "ready" ? report.images.after_photo : null} label="AI-визуализация" pendingText={report.after_photo.message} />
+              </div>
+              <p className="after-note">{report.after_photo.message} Визуализация не является гарантией результата.</p>
+            </section>
+          ) : null}
 
           <section className="section">
             <div className="cta-block">
