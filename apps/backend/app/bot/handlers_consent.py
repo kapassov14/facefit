@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from app.bot.states import FaceProtocolStates
+from app.db.crm import add_lead_event
 from app.db.models import AnalysisStatus, TelegramUser
 from app.db.session import SessionLocal
 
@@ -22,10 +23,10 @@ async def consent(callback: CallbackQuery, state: FSMContext) -> None:
             user.current_status = AnalysisStatus.WAITING_FOR_NAME
             if user.lead:
                 user.lead.status = AnalysisStatus.WAITING_FOR_NAME
+                add_lead_event(db, user.lead, "consent_accepted", "Пользователь подтвердил согласие")
             db.commit()
         await state.set_state(FaceProtocolStates.waiting_for_name)
         await callback.message.answer("Как к Вам обращаться? Напишите, пожалуйста, имя.")
         await callback.answer()
     finally:
         db.close()
-

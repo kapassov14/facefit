@@ -2,15 +2,11 @@ from __future__ import annotations
 
 import logging
 
-from app.ai.openai_client import generate_report_copy
-from app.ai.prompts import REPORT_PROMPT, load_default_system_prompt
 from app.db.models import AnalysisRequest, GeneratedReport
-from app.db.repositories import get_prompt
 from app.db.session import SessionLocal
-from app.knowledge.retriever import retrieve_context
-from app.reports.html_report import build_report_json, render_report_html
+from app.reports.html_report import build_face_protocol_html, build_report_json
 from app.workers.celery_app import celery_app
-from app.workers.tasks_analysis import log_job, regenerate_personal_insights_sync
+from app.workers.tasks_analysis import log_job
 
 logger = logging.getLogger(__name__)
 
@@ -21,22 +17,11 @@ def _regenerate_report(analysis_id: int) -> None:
         analysis = db.query(AnalysisRequest).filter(AnalysisRequest.id == analysis_id).first()
         if not analysis or not analysis.analysis_json:
             raise ValueError("Анализ не найден или JSON анализа пустой")
-        knowledge_context = retrieve_context(db, analysis.selected_problems or [])
-        system_prompt = get_prompt(db, "analysis_system", load_default_system_prompt())
-        report_prompt = get_prompt(db, "detailed_report", REPORT_PROMPT)
-        personal_insight_json = analysis.personal_insight_json or regenerate_personal_insights_sync(db, analysis)
-        extra = generate_report_copy(
-            analysis.analysis_json,
-            analysis.selected_problems or [],
-            knowledge_context,
-            system_prompt=system_prompt,
-            report_prompt=report_prompt,
-            personal_insight_json=personal_insight_json,
-        )
+        extra = {"source": "backend_template"}
         report_json = build_report_json(analysis.lead.name if analysis.lead else "Гость", analysis.analysis_json, analysis.selected_problems or [], extra)
         report = analysis.report or GeneratedReport(analysis_id=analysis.id, lead_id=analysis.lead_id)
         report.report_json = report_json
-        report.html_content = render_report_html(report_json)
+        report.html_content = build_face_protocol_html(analysis.analysis_json, analysis.lead.name if analysis.lead else "Гость", analysis.selected_problems or [], extra)
         report.is_published = True
         analysis.report_json = report_json
         db.add(report)

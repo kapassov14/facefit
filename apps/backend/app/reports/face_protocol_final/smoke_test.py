@@ -74,7 +74,8 @@ def main() -> None:
     workers_dir = Path(__file__).resolve().parents[2] / "workers"
     analysis_source = (workers_dir / "tasks_analysis.py").read_text(encoding="utf-8")
     telegram_source = (workers_dir / "tasks_telegram.py").read_text(encoding="utf-8")
-    _assert("render_face_protocol_final_v1" in analysis_source, "pipeline does not import final_v1 renderer")
+    _assert("render_face_protocol_final_v1" not in analysis_source, "pipeline still imports first protocol renderer")
+    _assert("render_face_zone_protocol_v1" in analysis_source, "pipeline does not render journal zone protocol")
     _assert("render_face_protocol_v4" not in analysis_source, "pipeline still imports protocol_v4 renderer")
     _assert('face_protocol_version = "final_v1"' in analysis_source, "new analyses do not save face_protocol_version = final_v1")
     _assert("analysis.face_protocol_image_path" in telegram_source, "Telegram flow does not use face_protocol_image_path")

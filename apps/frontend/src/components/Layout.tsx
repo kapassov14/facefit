@@ -3,9 +3,11 @@ import {
   BarChart3,
   Bot,
   Brain,
+  Database,
   FileText,
   Home,
   Images,
+  Link as LinkIcon,
   LogOut,
   Megaphone,
   MessageSquareText,
@@ -13,7 +15,8 @@ import {
   Sparkles,
   Tags,
   ShieldCheck,
-  Users
+  Users,
+  Gauge
 } from "lucide-react";
 
 import { Button } from "./ui";
@@ -21,15 +24,19 @@ import { useAuthStore } from "../shared/authStore";
 
 const links = [
   { to: "/admin/dashboard", label: "Dashboard", icon: Home },
+  { to: "/admin/crm", label: "CRM", icon: Users },
+  { to: "/admin/links", label: "Ссылки", icon: LinkIcon },
+  { to: "/admin/audiences", label: "Базы", icon: Database },
   { to: "/admin/leads", label: "Лиды", icon: Users },
   { to: "/admin/analysis", label: "Анализы", icon: Images },
+  { to: "/admin/ai-performance", label: "AI latency", icon: Gauge },
   { to: "/admin/reports", label: "Отчеты", icon: FileText },
   { to: "/admin/knowledge", label: "База знаний", icon: Brain },
   { to: "/admin/prompts", label: "Промпты", icon: MessageSquareText },
   { to: "/admin/broadcasts", label: "Рассылки", icon: Megaphone },
   { to: "/admin/campaigns", label: "UTM", icon: Tags },
   { to: "/admin/settings", label: "Настройки", icon: Settings },
-  { to: "/admin/admins", label: "Администраторы", icon: ShieldCheck }
+  { to: "/admin/managers", label: "Менеджеры", icon: ShieldCheck }
 ];
 
 export function Layout() {

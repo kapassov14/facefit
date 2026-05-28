@@ -5,9 +5,10 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from app.bot.keyboards import consent_keyboard
+from app.bot.funnel import name_request_text, welcome_text
+from app.bot.states import FaceProtocolStates
+from app.db.crm import add_lead_event, apply_source_link_to_lead, touch_lead
 from app.db.models import AnalysisStatus, CampaignSource, EventLog, Lead, TelegramUser
-from app.db.repositories import get_bot_settings
 from app.db.session import SessionLocal
 
 router = Router()
@@ -18,11 +19,15 @@ async def start(message: Message, state: FSMContext) -> None:
     payload = (message.text or "").split(maxsplit=1)[1] if message.text and len(message.text.split(maxsplit=1)) > 1 else None
     db = SessionLocal()
     try:
-        campaign = None
+        source_link = None
         if payload:
-            campaign = db.query(CampaignSource).filter(CampaignSource.start_payload == payload, CampaignSource.is_active.is_(True)).first()
-            if campaign:
-                campaign.clicks += 1
+            source_link = (
+                db.query(CampaignSource)
+                .filter(CampaignSource.start_payload == payload, CampaignSource.is_active.is_(True))
+                .first()
+            )
+            if source_link:
+                source_link.clicks += 1
         user = db.query(TelegramUser).filter(TelegramUser.telegram_id == message.from_user.id).first()
         if not user:
             user = TelegramUser(
@@ -31,9 +36,9 @@ async def start(message: Message, state: FSMContext) -> None:
                 first_name=message.from_user.first_name,
                 last_name=message.from_user.last_name,
                 language_code=message.from_user.language_code,
-                current_status=AnalysisStatus.WAITING_FOR_CONSENT,
+                current_status=AnalysisStatus.WAITING_FOR_NAME,
                 start_payload=payload,
-                campaign=campaign,
+                campaign=source_link,
             )
             db.add(user)
             db.flush()
@@ -41,23 +46,31 @@ async def start(message: Message, state: FSMContext) -> None:
             user.username = message.from_user.username
             user.first_name = message.from_user.first_name
             user.last_name = message.from_user.last_name
-            user.current_status = AnalysisStatus.WAITING_FOR_CONSENT
+            user.current_status = AnalysisStatus.WAITING_FOR_NAME
             user.start_payload = payload or user.start_payload
-            if campaign:
-                user.campaign = campaign
+            if source_link:
+                user.campaign = source_link
         lead = user.lead
         if not lead:
-            lead = Lead(telegram_user_id=user.id, status=AnalysisStatus.WAITING_FOR_CONSENT, source=payload)
+            lead = Lead(
+                telegram_user_id=user.id,
+                status=AnalysisStatus.WAITING_FOR_NAME,
+                source=(source_link.source if source_link else payload),
+            )
             db.add(lead)
+            db.flush()
         else:
-            lead.status = AnalysisStatus.WAITING_FOR_CONSENT
-            lead.source = payload or lead.source
+            lead.status = AnalysisStatus.WAITING_FOR_NAME
+            lead.source = (source_link.source if source_link else payload) or lead.source
+        touch_lead(lead)
+        if source_link:
+            apply_source_link_to_lead(db, lead, source_link, payload)
+        add_lead_event(db, lead, "start", "Пользователь нажал /start", {"source": payload})
         db.add(EventLog(telegram_user_id=user.id, lead_id=lead.id if lead.id else None, event_type="start", payload={"source": payload}))
-        settings = get_bot_settings(db)
         db.commit()
         await state.clear()
-        await message.answer(settings.welcome_text)
-        await message.answer(settings.consent_text, reply_markup=consent_keyboard())
+        await state.set_state(FaceProtocolStates.waiting_for_name)
+        await message.answer(welcome_text())
+        await message.answer(name_request_text())
     finally:
         db.close()
-

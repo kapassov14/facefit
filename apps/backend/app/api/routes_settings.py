@@ -17,6 +17,12 @@ def _key_status() -> dict:
         "gemini_api_key": bool(env_settings.gemini_api_key),
         "replicate_api_token": bool(env_settings.replicate_api_token),
         "models": {
+            "ai_text_provider": env_settings.ai_text_provider,
+            "ai_image_provider": env_settings.ai_image_provider,
+            "ai_analysis_model": env_settings.ai_analysis_model,
+            "ai_image_model_openai": env_settings.ai_image_model_openai,
+            "ai_image_model_gemini": env_settings.ai_image_model_gemini,
+            "ai_experiment_mode": env_settings.ai_experiment_mode,
             "openai_analysis_model": env_settings.openai_analysis_model,
             "openai_report_model": env_settings.openai_report_model,
             "gemini_model": env_settings.gemini_model,
@@ -39,4 +45,3 @@ def patch_settings(payload: SettingsPatch, _: AdminAuth, db: Session = Depends(g
     db.commit()
     db.refresh(settings)
     return settings_dict(settings, _key_status())
-

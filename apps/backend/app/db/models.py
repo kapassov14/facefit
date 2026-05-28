@@ -24,6 +24,7 @@ class TimestampMixin:
 class AnalysisStatus:
     WAITING_FOR_CONSENT = "WAITING_FOR_CONSENT"
     WAITING_FOR_NAME = "WAITING_FOR_NAME"
+    WAITING_FOR_AGE = "WAITING_FOR_AGE"
     WAITING_FOR_PHOTO = "WAITING_FOR_PHOTO"
     WAITING_FOR_PROBLEMS = "WAITING_FOR_PROBLEMS"
     QUEUED = "QUEUED"
@@ -43,6 +44,18 @@ class AdminRole:
     VIEWER = "viewer"
 
 
+class ClientStatus:
+    NEW = "new"
+    WARMING = "warming"
+    APPLIED = "applied"
+    WAITING_REPLY = "waiting_reply"
+    IN_PROGRESS = "in_progress"
+    BOUGHT = "bought"
+    REJECTED = "rejected"
+    NO_ANSWER = "no_answer"
+    ARCHIVED = "archived"
+
+
 class AdminUser(Base, TimestampMixin):
     __tablename__ = "admin_users"
 
@@ -51,6 +64,28 @@ class AdminUser(Base, TimestampMixin):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(32), default=AdminRole.MANAGER)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class Audience(Base, TimestampMixin):
+    __tablename__ = "audiences"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    color: Mapped[str] = mapped_column(String(32), default="#be7d86")
+
+    leads: Mapped[list["Lead"]] = relationship(back_populates="audience")
+    source_links: Mapped[list["CampaignSource"]] = relationship(back_populates="audience")
+
+
+class Tag(Base, TimestampMixin):
+    __tablename__ = "tags"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    color: Mapped[str] = mapped_column(String(32), default="#f2e7de")
+
+    lead_links: Mapped[list["LeadTag"]] = relationship(back_populates="tag", cascade="all, delete-orphan")
 
 
 class CampaignSource(Base, TimestampMixin):
@@ -66,8 +101,17 @@ class CampaignSource(Base, TimestampMixin):
     report_count: Mapped[int] = mapped_column(Integer, default=0)
     cta_clicks: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    source: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    campaign: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audience_id: Mapped[int | None] = mapped_column(ForeignKey("audiences.id", ondelete="SET NULL"), nullable=True)
+    funnel_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    assigned_manager_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    auto_tags: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     telegram_users: Mapped[list["TelegramUser"]] = relationship(back_populates="campaign")
+    audience: Mapped[Audience | None] = relationship(back_populates="source_links")
+    assigned_manager: Mapped[AdminUser | None] = relationship()
 
 
 class TelegramUser(Base, TimestampMixin):
@@ -97,6 +141,7 @@ class Lead(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     telegram_user_id: Mapped[int] = mapped_column(ForeignKey("telegram_users.id", ondelete="CASCADE"), unique=True)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    age: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(64), default=AnalysisStatus.WAITING_FOR_CONSENT, index=True)
     selected_problems: Mapped[list[str]] = mapped_column(JSON, default=list)
     report_opened: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -105,10 +150,66 @@ class Lead(Base, TimestampMixin):
     utm: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
     manager_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    crm_status: Mapped[str] = mapped_column(String(64), default=ClientStatus.NEW, index=True)
+    first_source_link_id: Mapped[int | None] = mapped_column(ForeignKey("campaign_sources.id", ondelete="SET NULL"), nullable=True)
+    last_source_link_id: Mapped[int | None] = mapped_column(ForeignKey("campaign_sources.id", ondelete="SET NULL"), nullable=True)
+    audience_id: Mapped[int | None] = mapped_column(ForeignKey("audiences.id", ondelete="SET NULL"), nullable=True)
+    assigned_manager_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     telegram_user: Mapped[TelegramUser] = relationship(back_populates="lead")
     analyses: Mapped[list["AnalysisRequest"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
     notes: Mapped[list["AdminNote"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
+    audience: Mapped[Audience | None] = relationship(back_populates="leads")
+    assigned_manager: Mapped[AdminUser | None] = relationship(foreign_keys=[assigned_manager_id])
+    first_source_link: Mapped[CampaignSource | None] = relationship(foreign_keys=[first_source_link_id])
+    last_source_link: Mapped[CampaignSource | None] = relationship(foreign_keys=[last_source_link_id])
+    tag_links: Mapped[list["LeadTag"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
+    events: Mapped[list["LeadEvent"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
+    touchpoints: Mapped[list["Touchpoint"]] = relationship(back_populates="lead", cascade="all, delete-orphan")
+
+
+class LeadTag(Base):
+    __tablename__ = "lead_tags"
+    __table_args__ = (UniqueConstraint("lead_id", "tag_id", name="uq_lead_tags_lead_tag"),)
+
+    lead_id: Mapped[int] = mapped_column(ForeignKey("leads.id", ondelete="CASCADE"), primary_key=True)
+    tag_id: Mapped[int] = mapped_column(ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    lead: Mapped[Lead] = relationship(back_populates="tag_links")
+    tag: Mapped[Tag] = relationship(back_populates="lead_links")
+
+
+class LeadEvent(Base):
+    __tablename__ = "lead_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    lead_id: Mapped[int] = mapped_column(ForeignKey("leads.id", ondelete="CASCADE"), index=True)
+    type: Mapped[str] = mapped_column(String(120), index=True)
+    title: Mapped[str] = mapped_column(String(500))
+    metadata_json: Mapped[dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+
+    lead: Mapped[Lead] = relationship(back_populates="events")
+    created_by: Mapped[AdminUser | None] = relationship()
+
+
+class Touchpoint(Base):
+    __tablename__ = "touchpoints"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    lead_id: Mapped[int] = mapped_column(ForeignKey("leads.id", ondelete="CASCADE"), index=True)
+    source_link_id: Mapped[int | None] = mapped_column(ForeignKey("campaign_sources.id", ondelete="SET NULL"), nullable=True, index=True)
+    source: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    campaign: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    lead: Mapped[Lead] = relationship(back_populates="touchpoints")
+    source_link: Mapped[CampaignSource | None] = relationship()
 
 
 class AnalysisRequest(Base, TimestampMixin):
@@ -334,6 +435,7 @@ class AdminNote(Base, TimestampMixin):
     text: Mapped[str] = mapped_column(Text)
 
     lead: Mapped[Lead] = relationship(back_populates="notes")
+    admin: Mapped[AdminUser | None] = relationship()
 
 
 class ReportViewEvent(Base, TimestampMixin):

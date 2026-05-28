@@ -5,9 +5,12 @@ from fastapi.staticfiles import StaticFiles
 from app.api import (
     routes_analysis,
     routes_admins,
+    routes_audiences,
+    routes_ai_performance,
     routes_auth,
     routes_broadcasts,
     routes_campaigns,
+    routes_crm,
     routes_dashboard,
     routes_knowledge,
     routes_leads,
@@ -15,6 +18,7 @@ from app.api import (
     routes_public,
     routes_reports,
     routes_settings,
+    routes_source_links,
     routes_telegram,
 )
 from app.core.config import settings
@@ -46,6 +50,10 @@ app.mount("/storage", StaticFiles(directory=str(settings.storage_root())), name=
 
 app.include_router(routes_auth.router)
 app.include_router(routes_admins.router)
+app.include_router(routes_crm.router)
+app.include_router(routes_source_links.router)
+app.include_router(routes_audiences.router)
+app.include_router(routes_ai_performance.router)
 app.include_router(routes_dashboard.router)
 app.include_router(routes_leads.router)
 app.include_router(routes_analysis.router)

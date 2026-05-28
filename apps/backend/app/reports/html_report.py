@@ -33,7 +33,7 @@ REPORT_TEMPLATE = Template(
     <div class="report-card">
       <span class="section-number">1</span>
       <h2>Биологический возраст кожи</h2>
-      <strong>{{ skin_age.estimated_range }}</strong>
+      <strong>{{ skin_age.visual_age or skin_age.estimated_range }}</strong>
       <p>{{ skin_age.explanation }}</p>
     </div>
     <div class="report-card">
@@ -44,7 +44,7 @@ REPORT_TEMPLATE = Template(
     </div>
     <div class="report-card">
       <span class="section-number amber">3</span>
-      <h2>Тип лица и тип старения</h2>
+      <h2>Сильные стороны и тип старения</h2>
       <strong>{{ face_type.face_type }} · {{ face_type.aging_type }}</strong>
       <p>{{ face_type.explanation }}</p>
     </div>
@@ -123,7 +123,7 @@ def build_report_json(user_name: str, analysis_json: dict[str, Any], selected_pr
         "date": datetime.now().strftime("%d.%m.%Y"),
         "summary": analysis_json.get("summary", ""),
         "main_problem": selected_problems[0] if selected_problems else (priority_zones[0] if priority_zones else "Тонус и свежесть лица"),
-        "main_potential": ", ".join(analysis_json.get("strengths", [])[:2]) or "хороший отклик на регулярную практику",
+        "main_potential": ", ".join(analysis_json.get("strengths", [])[:2]) or "шея и лимфоток как первый рычаг результата",
         "priority_zones": priority_zones,
         "analysis": analysis_json,
         "extra": extra or {},
@@ -154,3 +154,15 @@ def render_report_html(report_json: dict[str, Any]) -> str:
         benefits=analysis.get("facefitness_benefits", []),
         forecast=analysis.get("time_forecast", {}),
     )
+
+
+def build_face_protocol_html(
+    analysis_json: dict[str, Any],
+    user_name: str = "Гость",
+    selected_problems: list[str] | None = None,
+    extra: dict[str, Any] | None = None,
+) -> str:
+    return render_report_html(build_report_json(user_name, analysis_json, selected_problems or [], extra or {"source": "backend_template"}))
+
+
+buildFaceProtocolHtml = build_face_protocol_html

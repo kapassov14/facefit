@@ -267,7 +267,7 @@ def render_slide_2(
     cards = [
         ((72, 224, 1008, 416), "Биологический возраст кожи", safe["summary"]["skin_age"], PALETTE.dusty_rose),
         ((72, 448, 1008, 640), "Тип кожи", safe["summary"]["skin_type"], PALETTE.sage),
-        ((72, 672, 1008, 864), "Тип лица и старения", safe["summary"]["aging_type"], PALETTE.sand),
+        ((72, 672, 1008, 864), "Форма лица и старения", safe["summary"]["aging_type"], PALETTE.sand),
         ((72, 896, 1008, 1088), "Сильные стороны", safe["summary"]["strengths"], PALETTE.muted_rose),
     ]
     for box, title, text, accent in cards:

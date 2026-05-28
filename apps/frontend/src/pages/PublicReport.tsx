@@ -336,8 +336,8 @@ export function PublicReport() {
                   <ul className="bullet">{textItems(report.skin_type.features).map((item) => <li key={item}>{item}</li>)}</ul>
                 </div>
                 <div className="card warm">
-                  <span className="label">Тип лица / старения</span>
-                  <h3 className="card-title" style={{ marginTop: 8 }}>{report.face_aging.face_type}</h3>
+                  <span className="label">Сильные стороны / старение</span>
+                  <h3 className="card-title" style={{ marginTop: 8 }}>{report.face_aging.face_strengths}</h3>
                   <p><b>{report.face_aging.aging_type}</b></p>
                   <p>{report.face_aging.strong_base}</p>
                 </div>

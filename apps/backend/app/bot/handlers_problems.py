@@ -7,6 +7,7 @@ from aiogram.types import CallbackQuery
 from app.bot.keyboards import problems_keyboard, title_by_slug
 from app.bot.progress import progress_text, save_progress_message
 from app.bot.states import FaceProtocolStates
+from app.db.crm import add_lead_event
 from app.db.models import AnalysisRequest, AnalysisStatus, SelectedProblem
 from app.db.repositories import get_bot_settings
 from app.db.session import SessionLocal
@@ -39,6 +40,7 @@ async def choose_problem(callback: CallbackQuery, state: FSMContext) -> None:
             if analysis.lead:
                 analysis.lead.selected_problems = titles
                 analysis.lead.status = AnalysisStatus.QUEUED
+                add_lead_event(db, analysis.lead, "problems_selected", "Пользователь выбрал зоны внимания", {"problems": titles})
             if analysis.telegram_user:
                 analysis.telegram_user.current_status = AnalysisStatus.QUEUED
             db.query(SelectedProblem).filter(SelectedProblem.analysis_id == analysis.id).delete()

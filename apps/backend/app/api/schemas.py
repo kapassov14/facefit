@@ -6,7 +6,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
@@ -69,6 +69,78 @@ class CampaignCreate(BaseModel):
     slug: str
     title: str
     start_payload: str | None = None
+
+
+class CrmLeadCreate(BaseModel):
+    telegram_id: int
+    username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    name: str | None = None
+    phone: str | None = None
+    status: str = "new"
+    source: str | None = None
+    audience_id: int | None = None
+    assigned_manager_id: int | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class CrmLeadPatch(BaseModel):
+    name: str | None = None
+    phone: str | None = None
+    status: str | None = None
+    source: str | None = None
+    audience_id: int | None = None
+    assigned_manager_id: int | None = None
+    tags: list[str] | None = None
+
+
+class LeadNoteCreate(BaseModel):
+    text: str = Field(min_length=1, max_length=5000)
+
+
+class LeadTagCreate(BaseModel):
+    tag_id: int | None = None
+    name: str | None = Field(default=None, max_length=120)
+    color: str | None = Field(default=None, max_length=32)
+
+
+class SourceLinkCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    slug: str = Field(min_length=1, max_length=64)
+    source: str | None = Field(default=None, max_length=80)
+    campaign: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+    audience_id: int | None = None
+    tags: list[str] = Field(default_factory=list)
+    funnel_id: int | None = None
+    assigned_manager_id: int | None = None
+    is_active: bool = True
+
+
+class SourceLinkPatch(BaseModel):
+    name: str | None = Field(default=None, max_length=255)
+    slug: str | None = Field(default=None, max_length=64)
+    source: str | None = Field(default=None, max_length=80)
+    campaign: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+    audience_id: int | None = None
+    tags: list[str] | None = None
+    funnel_id: int | None = None
+    assigned_manager_id: int | None = None
+    is_active: bool | None = None
+
+
+class AudienceCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+    color: str = Field(default="#be7d86", max_length=32)
+
+
+class AudiencePatch(BaseModel):
+    name: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+    color: str | None = Field(default=None, max_length=32)
 
 
 class AdminCreate(BaseModel):

@@ -23,8 +23,10 @@ STAGE_ORDER = {
     "queued": 10,
     "analysis": 20,
     "protocol_copy": 30,
-    "render": 40,
-    "report": 50,
+    "after_photo": 40,
+    "render": 50,
+    "report": 60,
+    "almost_ready": 70,
     "ready": 100,
 }
 
@@ -32,30 +34,32 @@ STAGE_ORDER = {
 STAGE_TEXT = {
     "queued": (
         "Bella Vladi Face Protocol\n\n"
-        "Шаг 1 из 5\n"
-        "Фото принято. Заявка в очереди на AI-анализ.\n\n"
-        "Я буду обновлять это сообщение по мере готовности."
+        "Подготавливаю твой персональный протокол... ⏳\n"
+        "Это займёт около минуты."
     ),
     "analysis": (
         "Bella Vladi Face Protocol\n\n"
-        "Шаг 2 из 5\n"
-        "AI анализирует фото: тип кожи, морфотип, зоны внимания и выбранные проблемы.\n\n"
-        "Обычно это занимает несколько минут."
+        "Анализирую лицо: тип кожи, морфотип, зоны внимания и выбранные проблемы."
     ),
     "protocol_copy": (
         "Bella Vladi Face Protocol\n\n"
-        "Шаг 3 из 5\n"
-        "Собираю персональные формулировки для протокола: коротко, по делу и по вашему фото."
+        "Формирую персональный протокол."
     ),
     "render": (
         "Bella Vladi Face Protocol\n\n"
-        "Шаг 4 из 5\n"
-        "Рендерю финальный PNG-протокол в формате premium beauty journal."
+        "Собираю PNG-фото-протокол со встроенным after-фото."
     ),
     "report": (
         "Bella Vladi Face Protocol\n\n"
-        "Шаг 5 из 5\n"
         "Готовлю подробный web-отчет и ссылку для просмотра."
+    ),
+    "after_photo": (
+        "Bella Vladi Face Protocol\n\n"
+        "Генерирую after-фото. Оно будет встроено прямо в фото-протокол."
+    ),
+    "almost_ready": (
+        "Bella Vladi Face Protocol\n\n"
+        "Почти готово. Финально проверяю протокол и готовлю отправку."
     ),
 }
 
@@ -65,8 +69,8 @@ def progress_text(stage: str, report_url: str | None = None) -> str:
         base = (
             "Bella Vladi Face Protocol\n\n"
             "Готово. Ваш face-протокол сформирован.\n\n"
-            "PNG-протокол отправлен отдельным сообщением.\n"
-            "After-photo пришлю отдельно, если генерация займет больше времени."
+            "PNG-фото-протокол отправлен отдельным сообщением.\n"
+            "Подробный web-отчет пришлю следующей ссылкой."
         )
         if report_url:
             base += f"\n\nПодробный отчет:\n{report_url}"

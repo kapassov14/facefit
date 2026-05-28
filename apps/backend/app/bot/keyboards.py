@@ -28,7 +28,7 @@ def problems_keyboard(problem_catalog: list[dict[str, str]] | None = None, selec
     for item in problem_catalog or DEFAULT_PROBLEMS:
         mark = "✓ " if item["slug"] in selected else ""
         rows.append([InlineKeyboardButton(text=f"{mark}{item['title']}", callback_data=f"problem:{item['slug']}")])
-    rows.append([InlineKeyboardButton(text="Готово — сделай анализ", callback_data="problem:done")])
+    rows.append([InlineKeyboardButton(text="✅ Готово — сделай анализ", callback_data="problem:done")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -37,4 +37,3 @@ def title_by_slug(slug: str, problem_catalog: list[dict[str, str]] | None = None
         if item["slug"] == slug:
             return item["title"]
     return slug
-

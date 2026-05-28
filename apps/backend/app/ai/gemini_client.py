@@ -13,26 +13,19 @@ import httpx
 from PIL import Image, ImageOps
 
 from app.core.config import settings
+from app.ai.json_repair import parse_json_safely
+from app.ai.prompts import build_analysis_system_prompt, build_analysis_user_prompt
+from app.ai.protocol_v4 import ProtocolValidationError
+from app.ai.schemas import normalize_analysis_payload, validate_and_sanitize_protocol
 
 
-SCHEMA_INSTRUCTION = """
-Верни только валидный JSON object без markdown.
-Нужно привести входной текст к этой схеме:
-{
-  "skin_visual_age": {"estimated_range": "string", "explanation": "string", "confidence": "low|medium|high"},
-  "skin_type": {"type": "string", "features": ["string"], "strengths": ["string"], "attention_points": ["string"]},
-  "face_type_and_aging_type": {"face_type": "string", "aging_type": "string", "explanation": "string"},
-  "zones": [
-    {"number": 1, "name": "string", "status": "good|attention|priority", "color": "green|yellow|red", "short_comment": "string", "reason": "string", "recommended_focus": "string"}
-  ],
-  "causes": ["string"],
-  "strengths": ["string"],
-  "facefitness_benefits": ["string"],
-  "time_forecast": {"first_changes": "string", "visible_changes": "string", "stable_result": "string"},
-  "summary": "string",
-  "cta_recommendation": "string"
-}
-"""
+SCHEMA_INSTRUCTION = (
+    build_analysis_system_prompt("")
+    + "\n\nПреобразуй входной текст в полный JSON bella_face_protocol_v4. "
+    "Если данных не хватает, сделай осторожную визуальную оценку без старых классификаций и без копирования примеров."
+)
+
+FACE_ANALYSIS_JSON_PROMPT = build_analysis_system_prompt("")
 
 
 def repair_or_structure_with_gemini(raw_text: str) -> dict[str, Any] | None:
@@ -47,6 +40,115 @@ def repair_or_structure_with_gemini(raw_text: str) -> dict[str, Any] | None:
         return json.loads(response.text)
     except Exception:
         return None
+
+
+def _validation_errors(exc: Exception) -> list[str]:
+    if isinstance(exc, ProtocolValidationError):
+        return exc.errors
+    if hasattr(exc, "errors"):
+        try:
+            return [f"{err['loc']}: {err['msg']}" for err in exc.errors()]
+        except Exception:
+            pass
+    return [str(exc)]
+
+
+def _gemini_generate_json(model: str, prompt: str, photo_path: str) -> str:
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    _read_image_part(photo_path),
+                ],
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.2,
+            "responseMimeType": "application/json",
+        },
+    }
+    response = httpx.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        headers={"x-goog-api-key": settings.gemini_api_key, "Content-Type": "application/json"},
+        json=payload,
+        timeout=settings.ai_timeout_seconds,
+    )
+    if response.status_code >= 400:
+        try:
+            detail = response.json().get("error", {}).get("message", response.text)
+        except Exception:
+            detail = response.text
+        raise RuntimeError(f"Gemini face analysis failed: {detail[:800]}")
+    return _extract_text(response.json()) or "{}"
+
+
+def _normalize_gemini_response(raw: str, user_age: int | None) -> tuple[dict[str, Any], dict[str, Any]]:
+    parsed = parse_json_safely(raw)
+    normalized = normalize_analysis_payload(parsed, client_age=user_age)
+    return validate_and_sanitize_protocol(normalized), parsed if isinstance(parsed, dict) else {}
+
+
+def analyze_face_with_gemini(
+    photo_path: str,
+    user_name: str | None = None,
+    selected_problems: list[str] | None = None,
+    knowledge_context: str = "",
+    system_prompt: str | None = None,
+    user_age: int | None = None,
+) -> dict[str, Any]:
+    model = (settings.ai_analysis_model or settings.gemini_model or "gemini-2.5-flash-lite").removeprefix("models/")
+    if not settings.gemini_api_key:
+        raise RuntimeError("GEMINI_API_KEY is missing")
+    prompt = "\n\n".join(
+        [
+            build_analysis_system_prompt(system_prompt or ""),
+            build_analysis_user_prompt(
+                user_name,
+                selected_problems or [],
+                knowledge_context,
+                system_prompt or "",
+                user_age=user_age,
+            ),
+        ]
+    )
+
+    raw = _gemini_generate_json(model, prompt, photo_path)
+    parsed_for_fallback: dict[str, Any] = {}
+    try:
+        result, parsed_for_fallback = _normalize_gemini_response(raw, user_age)
+        result["_validation_meta"] = {
+            "validationPassed": True,
+            "retryCount": 0,
+            "fallbackUsed": False,
+            "validationErrors": [],
+        }
+        return result
+    except Exception as exc:
+        first_errors = _validation_errors(exc)
+
+    retry_prompt = (
+        f"{prompt}\n\n"
+        "Предыдущий JSON не прошел validation. Исправь только JSON и верни полный объект bella_face_protocol_v4.\n"
+        "Конкретные ошибки:\n- "
+        + "\n- ".join(first_errors[:12])
+        + "\n\nПредыдущий JSON:\n"
+        + raw[:12000]
+    )
+    retry_raw = _gemini_generate_json(model, retry_prompt, photo_path)
+    try:
+        result, parsed_for_fallback = _normalize_gemini_response(retry_raw, user_age)
+        result["_validation_meta"] = {
+            "validationPassed": True,
+            "retryCount": 1,
+            "fallbackUsed": False,
+            "validationErrors": first_errors,
+        }
+        return result
+    except Exception as retry_exc:
+        retry_errors = first_errors + _validation_errors(retry_exc)
+        raise ProtocolValidationError(retry_errors) from retry_exc
 
 
 def _protocol_image_model() -> str | None:

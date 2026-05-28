@@ -11,9 +11,11 @@ from sqlalchemy.orm import Session
 from app.api.serializers import report_public_dict
 from app.core.config import settings as env_settings
 from app.core.exceptions import not_found
-from app.db.models import CtaClickEvent, GeneratedReport, ReportViewEvent
+from app.db.crm import add_lead_event
+from app.db.models import ClientStatus, CtaClickEvent, GeneratedReport, ReportViewEvent
 from app.db.repositories import get_bot_settings
 from app.db.session import get_db
+from app.reports.bella_web_report import render_bella_web_report_html
 from app.storage.local import local_storage
 
 router = APIRouter(tags=["public"])
@@ -31,9 +33,29 @@ def _e(value: Any) -> str:
     return escape(str(value or ""))
 
 
+def _clean_public(value: Any) -> str:
+    text = str(value or "")
+    text = text.replace("Нормальная кожа", "Кожа с ровной плотной базой")
+    text = text.replace("нормальная кожа", "кожа с ровной плотной базой")
+    text = text.replace("Нормальная", "Комбинированная с ровной плотной базой")
+    text = text.replace("нормальная", "комбинированная с ровной плотной базой")
+    text = text.replace("normal", "комбинированная с ровной плотной базой")
+    return " ".join(text.split())
+
+
+def _skin_type_public_title(value: Any) -> str:
+    text = _clean_public(value)
+    lowered = text.lower()
+    if not lowered or lowered in {"unknown", "none", "не определено"}:
+        return "Комбинированная, с ровной плотной базой"
+    if "комбинированная с ровной плотной базой" in lowered or "смешан" in lowered:
+        return "Комбинированная, с ровной плотной базой"
+    return text
+
+
 def _items_html(items: list[str] | None, fallback: str) -> str:
     values = items or [fallback]
-    return "".join(f"<li>{_e(item)}</li>" for item in values)
+    return "".join(f"<li>{_e(_clean_public(item))}</li>" for item in values)
 
 
 def _zone_label(zone: dict[str, Any]) -> str:
@@ -119,6 +141,7 @@ def public_report_page(token: str, request: Request, db: Session = Depends(get_d
     report.opened_count += 1
     if report.analysis and report.analysis.lead:
         report.analysis.lead.report_opened = True
+        add_lead_event(db, report.analysis.lead, "report_opened", "Пользователь открыл отчет", {"report_id": report.id})
     db.add(
         ReportViewEvent(
             report_id=report.id,
@@ -131,8 +154,7 @@ def public_report_page(token: str, request: Request, db: Session = Depends(get_d
     backend_url = (env_settings.backend_url or "").rstrip("/")
     if public_app_url and public_app_url != backend_url:
         return RedirectResponse(f"{public_app_url}/report/{_e(token)}")
-    payload = json.dumps(report_public_dict(report, bot_settings), ensure_ascii=False).replace("</", "<\\/")
-    return PUBLIC_REPORT_SHELL.replace("__TOKEN__", _e(token)).replace("__REPORT_JSON__", payload)
+    return render_bella_web_report_html(report, bot_settings)
 
     analysis = report.analysis
     report_json = report.report_json or {}
@@ -159,7 +181,7 @@ def public_report_page(token: str, request: Request, db: Session = Depends(get_d
 
     skin_age = analysis_json.get("skin_visual_age", {})
     skin_type = analysis_json.get("skin_type", {})
-    face_type = analysis_json.get("face_type_and_aging_type", {})
+    face_strengths = analysis_json.get("face_type_and_aging_type", {})
     zones = analysis_json.get("zones", [])
     forecast = analysis_json.get("time_forecast", {})
 
@@ -307,13 +329,13 @@ def public_report_page(token: str, request: Request, db: Session = Depends(get_d
     </article>
     <article class="card">
       <div class="section-head"><span class="number green">2</span><h2>Тип кожи</h2></div>
-      <strong>{_e(skin_type.get("type"))}</strong>
+      <strong>{_e(_skin_type_public_title(skin_type.get("type")))}</strong>
       <ul>{features_html}</ul>
     </article>
     <article class="card">
-      <div class="section-head"><span class="number amber">3</span><h2>Тип лица и тип старения</h2></div>
-      <strong>{_e(face_type.get("face_type"))} · {_e(face_type.get("aging_type"))}</strong>
-      <p>{_e(face_type.get("explanation"))}</p>
+      <div class="section-head"><span class="number amber">3</span><h2>Сильные стороны и тип старения</h2></div>
+      <strong>{_e(face_strengths.get("face_type"))} · {_e(face_strengths.get("aging_type"))}</strong>
+      <p>{_e(face_strengths.get("explanation"))}</p>
     </article>
   </section>
 
@@ -391,6 +413,8 @@ def public_report_cta(token: str, request: Request, db: Session = Depends(get_db
     report.cta_click_count += 1
     if report.analysis and report.analysis.lead:
         report.analysis.lead.cta_clicked = True
+        report.analysis.lead.crm_status = ClientStatus.APPLIED
+        add_lead_event(db, report.analysis.lead, "cta_clicked", "Пользователь нажал CTA", {"report_id": report.id, "target_url": target})
     db.add(
         CtaClickEvent(
             report_id=report.id,

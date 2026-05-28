@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Персональный протокол лица · Bella Vladi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EDE5D8;
+  --paper: #F5EFE4;
+  --card: #FDFAF4;
+  --card-border: rgba(180, 160, 130, 0.25);
+  --ink: #2A221A;
+  --ink-soft: #5A4A3C;
+  --ink-mute: #9A8A78;
+  --accent: #A07840;
+  --accent-light: #C4A06A;
+  --accent-bg: rgba(180, 150, 100, 0.08);
+  --green: #6B9A60;
+  --yellow: #C4A040;
+  --orange: #C88C46;
+  --red: #C06048;
+  --green-bg: rgba(107, 154, 96, 0.12);
+  --yellow-bg: rgba(196, 160, 64, 0.12);
+  --orange-bg: rgba(200, 140, 70, 0.12);
+  --red-bg: rgba(192, 96, 72, 0.12);
+  --serif: 'Cormorant Garamond', 'Georgia', serif;
+  --sans: 'Jost', 'Helvetica Neue', sans-serif;
+  --radius: 16px;
+  --shadow: 0 1px 0 rgba(0,0,0,0.02), 0 4px 16px rgba(120,100,70,0.06);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg); }
+body {
+  font-family: var(--sans);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.48;
+  -webkit-font-smoothing: antialiased;
+  padding: 0;
+}
+
+/* ═══ PAGE ═══ */
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: var(--paper);
+  min-height: auto;
+  padding: 26px 30px 24px;
+}
+
+/* ═══ HEADER ═══ */
+.header {
+  text-align: center;
+  padding-bottom: 18px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--card-border);
+}
+.monogram {
+  width: 42px; height: 42px;
+  border: 1.5px solid var(--accent-light);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--ink);
+  margin-bottom: 11px;
+}
+.header-eyebrow {
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+}
+.header h1 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 42px;
+  line-height: 1.05;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.header h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+.header-sub {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+.header-meta {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.header-meta span { color: var(--ink-mute); font-weight: 400; }
+
+/* ═══ CARD ═══ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 18px 19px 17px;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+.card-num {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--accent);
+  margin-bottom: 5px;
+  line-height: 1;
+}
+.card-title {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 23px;
+  line-height: 1.2;
+  color: var(--ink);
+  margin-bottom: 10px;
+  letter-spacing: 0;
+}
+.card ul {
+  list-style: none;
+}
+.card li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 6px;
+  font-size: 15.8px;
+  line-height: 1.42;
+  color: var(--ink-soft);
+}
+.card li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 5px;
+  height: 5px;
+  background: var(--accent-light);
+  border-radius: 50%;
+}
+.card li:last-child { margin-bottom: 0; }
+
+/* ═══ COMPACT GRID ═══ */
+.grid-top {
+  display: grid;
+  grid-template-columns: 0.98fr 1.06fr 0.98fr;
+  grid-template-areas:
+    "bio       map       aging"
+    "skin      map       aging"
+    "strengths why       benefits"
+    "age       age       timeline";
+  align-items: stretch;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.grid-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* ═══ LEFT COLUMN: stacked 01 + 02 ═══ */
+.col-left {
+  display: contents;
+}
+
+.col-center,
+.col-right {
+  display: contents;
+}
+
+#block-01 { grid-area: bio; }
+#block-02 { grid-area: skin; }
+#block-03 { grid-area: strengths; }
+#block-04 { grid-area: aging; }
+#block-05 { grid-area: why; }
+#block-06 { grid-area: age; }
+#block-07 { grid-area: benefits; }
+#block-08 { grid-area: timeline; }
+#zone-map-card { grid-area: map; }
+
+/* ═══ 01: BIO AGE ═══ */
+.age-number {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 54px;
+  line-height: 0.9;
+  color: var(--ink);
+  display: inline;
+}
+.age-unit {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--ink-mute);
+  margin-left: 6px;
+  display: inline;
+  vertical-align: baseline;
+}
+.score-line {
+  margin-top: 9px;
+  margin-bottom: 7px;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-weight: 500;
+}
+.score-line b {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.bio-desc {
+  font-size: 16.4px;
+  color: var(--ink-soft);
+  line-height: 1.42;
+}
+.passport-age {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--ink-mute);
+}
+.card-text {
+  font-size: 16.6px;
+  color: var(--ink-soft);
+  line-height: 1.47;
+  white-space: pre-line;
+}
+.card-text + .card-text { margin-top: 7px; }
+.strengths-compliment {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink);
+  line-height: 1.34;
+  margin-bottom: 8px;
+}
+
+/* ═══ 02: SKIN TYPE ═══ */
+.skin-type-name {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--ink);
+  margin-bottom: 9px;
+  line-height: 1.3;
+}
+
+/* ═══ 03: AGING TYPE ═══ */
+.aging-type {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 24px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  font-weight: 600;
+  margin-bottom: 10px;
+  line-height: 1.22;
+}
+
+/* ═══ 04: ZONE MAP ═══ */
+.zone-photo-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  aspect-ratio: 1.08;
+  background: linear-gradient(180deg, #e8dece, #ddd0bc);
+}
+.zone-photo-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 58%;
+  display: block;
+}
+.zone-photo-wrap svg.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.zone-soft-fill {
+  filter: url(#zoneSoftBlur);
+  mix-blend-mode: multiply;
+}
+.zone-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px 10px;
+  margin-bottom: 9px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.zone-legend .dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.zone-legend .dot::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.zone-legend .dot.g::before { background: var(--green); }
+.zone-legend .dot.y::before { background: var(--yellow); }
+.zone-legend .dot.o::before { background: var(--orange); }
+.zone-legend .dot.r::before { background: var(--red); }
+
+.zone-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 12px;
+}
+.zone-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.6px;
+  color: var(--ink-soft);
+}
+.zone-item .zn {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--accent);
+  min-width: 12px;
+}
+
+/* ═══ 06: AGE CHANGES CARD ═══ */
+.card-age-changes {
+  margin-bottom: 0;
+}
+
+/* ═══ GROWTH AREAS ═══ */
+.growth-section {
+  margin-bottom: 14px;
+}
+.growth-section .card-num {
+  margin-bottom: 4px;
+}
+.growth-section .card-title {
+  margin-bottom: 8px;
+}
+.growth-text,
+.timeline-intro {
+  font-size: 16px;
+  line-height: 1.42;
+  color: var(--ink-soft);
+}
+.timeline-intro {
+  margin-bottom: 6px;
+}
+#block-07,
+#block-08 {
+  padding-top: 14px;
+  padding-bottom: 13px;
+}
+#block-08 .card-title {
+  margin-bottom: 6px;
+}
+.growth-text {
+  max-width: 760px;
+  margin-bottom: 8px;
+}
+.growth-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.growth-tag {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+.growth-tag.green {
+  color: #4a7a42;
+  border: 1px solid rgba(107,154,96,0.45);
+  background: rgba(107,154,96,0.10);
+}
+.growth-tag.yellow {
+  color: #7a6520;
+  border: 1px solid rgba(196,160,64,0.45);
+  background: rgba(196,160,64,0.10);
+}
+.growth-tag.orange {
+  color: #8a5520;
+  border: 1px solid rgba(200,140,70,0.50);
+  background: rgba(200,140,70,0.12);
+}
+.growth-tag.red {
+  color: #993830;
+  border: 1px solid rgba(192,96,72,0.50);
+  background: rgba(192,96,72,0.12);
+}
+
+/* ═══ FINAL / ENVOI ═══ */
+.final-block {
+  position: relative;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.92), rgba(244,232,211,0.94)),
+    radial-gradient(420px 180px at 90% 10%, rgba(160,120,64,0.16), transparent 68%);
+  border: 1.4px solid rgba(160,120,64,0.34);
+  border-radius: var(--radius);
+  padding: 22px 26px 22px 30px;
+  box-shadow: 0 18px 48px rgba(70,52,36,0.14), 0 0 0 1px rgba(255,255,255,0.55) inset;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.42fr);
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.final-block::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 16px;
+  bottom: 16px;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent), rgba(160,120,64,0.38));
+}
+.final-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.final-eyebrow::after {
+  content: '';
+  width: 42px;
+  height: 1px;
+  background: rgba(160,120,64,0.46);
+}
+.final-text {
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+  max-width: 680px;
+}
+.final-tagline {
+  position: relative;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 23px;
+  line-height: 1.18;
+  color: var(--accent);
+  text-align: right;
+  max-width: 250px;
+  padding-left: 18px;
+}
+.final-tagline::before {
+  content: '“';
+  position: absolute;
+  left: 0;
+  top: -16px;
+  font-family: var(--serif);
+  font-size: 52px;
+  line-height: 1;
+  color: rgba(160,120,64,0.22);
+}
+
+/* ═══ DISCLAIMER ═══ */
+.disclaimer {
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  padding-top: 10px;
+  border-top: 1px solid var(--card-border);
+}
+</style>
+</head>
+<body>
+
+<div class="page" id="protocol-root">
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="header">
+    <div class="monogram" data-slot="monogram">BV</div>
+    <div class="header-eyebrow" data-slot="eyebrow">BELLA VLADI · FACE PROTOCOL</div>
+    <h1>Персональный <em>протокол</em> лица</h1>
+    <div class="header-sub">ЭСТЕТИЧЕСКИЙ AI-РАЗБОР В ФОРМАТЕ ЖУРНАЛА</div>
+    <div class="header-meta"><span data-slot="user-name">Гость</span> · <span data-slot="date">Дата протокола</span></div>
+  </header>
+
+  <!-- ═══ BALANCED GRID: 01+02+03+06 | MAP+05 | 04+07+08 ═══ -->
+  <div class="grid-top">
+
+    <!-- LEFT: 01 + 02 + 03 -->
+    <div class="col-left">
+      <!-- 01: Bio Age -->
+      <div class="card" id="block-01">
+        <div class="card-num">01</div>
+        <div class="card-title">Биологический возраст кожи</div>
+        <div>
+          <span class="age-number" data-slot="bio-age">37</span>
+          <span class="age-unit" data-slot="bio-age-unit">лет</span>
+        </div>
+        <div class="score-line">СОСТОЯНИЕ КОЖИ · <b data-slot="score">78</b>/100</div>
+        <div class="bio-desc" data-slot="bio-desc">Кожа плотная и ухоженная; свежесть сильнее всего задают взгляд и мягкий тонус.</div>
+        <div class="passport-age" data-slot="passport-age"></div>
+      </div>
+
+      <!-- 02: Skin Type -->
+      <div class="card" id="block-02">
+        <div class="card-num">02</div>
+        <div class="card-title">Тип кожи</div>
+        <div class="skin-type-name" data-slot="skin-type">Комбинированная, склонная к обезвоженности</div>
+        <div class="card-text" data-slot="skin-desc">У вас комбинированная кожа с легкой склонностью к обезвоженности. Плюс этого типа — кожа хорошо держит каркас лица. Центральная зона просит больше влаги; при мягком уходе тон выглядит свежее и ровнее.</div>
+      </div>
+
+      <!-- 03: Strengths -->
+      <div class="card" id="block-03">
+        <div class="card-num">03</div>
+        <div class="card-title">Ваши сильные стороны лица</div>
+        <div class="strengths-compliment" data-slot="strengths-compliment"></div>
+        <ul data-slot="strengths">
+          <li>Форма лица и овал выглядят гармонично.</li>
+          <li>Скулы дают природную опору, которую часто усиливают процедурами.</li>
+          <li>Глаза, симметрия и пропорции создают выразительность.</li>
+        </ul>
+      </div>
+
+      <!-- 06: Age Changes -->
+      <div class="card card-age-changes" id="block-06">
+        <div class="card-num">06</div>
+        <div class="card-title" id="age-changes-title">Первые изменения по возрасту</div>
+        <div class="card-text" data-slot="age-changes-text">Для вашего типа старения в 30–35 лет обычно глаза и уголки рта быстрее выдают усталость. В 35–40 — свежесть и тонус возвращаются медленнее. Сейчас — лучшее время начать.</div>
+      </div>
+    </div>
+
+    <!-- CENTER: Zone map + 05 -->
+    <div class="col-center">
+      <div class="card" id="zone-map-card">
+        <div class="card-title">Карта зон лица</div>
+        <div class="zone-photo-wrap">
+          <img data-slot="face-img" data-protocol-image src="" alt="Фото лица"
+               onerror="this.style.display='none';">
+          <svg class="overlay" viewBox="0 0 100 100" preserveAspectRatio="none" data-slot="zone-overlay">
+            <!-- Зоны генерируются JS -->
+          </svg>
+        </div>
+        <div class="zone-legend">
+          <span class="dot g">Всё хорошо</span>
+          <span class="dot y">Зона внимания</span>
+          <span class="dot o">Активный фокус</span>
+          <span class="dot r">Приоритет</span>
+        </div>
+        <div class="zone-list" data-slot="zone-list">
+          <!-- Генерируется JS -->
+        </div>
+      </div>
+
+      <!-- 05: Why -->
+      <div class="card" id="block-05">
+        <div class="card-num">05</div>
+        <div class="card-title">Какие изменения будут со временем</div>
+        <div class="card-text" data-slot="why-text">Без грамотного ухода и поддержки именно вашего типа старения зона глаз, носогубка и уголки рта к вечеру могут сильнее выдавать усталость. Микроциркуляция и мягкий тонус возвращают свежесть.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: 04 + 07 + 08 -->
+    <div class="col-right">
+      <!-- 04: Aging -->
+      <div class="card" id="block-04">
+        <div class="card-num">04</div>
+        <div class="card-title">Тип старения</div>
+        <div class="aging-type" data-slot="aging-type">Усталый / смешанный</div>
+        <div class="card-text" data-slot="aging-desc-text">Ведущий сценарий задают зоны, которые быстрее всего меняют ощущение свежести.</div>
+      </div>
+
+      <!-- 07: FF Benefits -->
+      <div class="card" id="block-07">
+        <div class="card-num">07</div>
+        <div class="card-title">Что даст фейс-фитнес</div>
+        <div class="card-text" data-slot="ff-benefits-text">Фейс-фитнес помогает мягко проявить сильные стороны лица и поддержать главный сценарий.</div>
+        <ul data-slot="ff-benefits">
+          <li>Взгляд может стать свежее и мягче.</li>
+          <li>Скулы — выразительнее, овал — собраннее.</li>
+          <li>Лицо выглядит живее даже без макияжа.</li>
+        </ul>
+      </div>
+
+      <!-- 08: Timeline -->
+      <div class="card" id="block-08">
+        <div class="card-num">08</div>
+        <div class="card-title">Прогноз по времени</div>
+        <div class="timeline-intro" data-slot="timeline-intro">Если ты начнёшь заниматься по нашей системе:</div>
+        <ul data-slot="timeline">
+          <li>Через 2 недели — взгляд свежее.</li>
+          <li>Через 3–4 недели — носогубная зона мягче.</li>
+          <li>Через 6–8 недель — овал собраннее.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ FINAL ═══ -->
+  <div class="final-block">
+    <div>
+      <div class="final-eyebrow">ИТОГ</div>
+      <div class="final-text" data-slot="final-summary">У вас красивое лицо с сильной природной базой. Главное сейчас — раскрыть то, что уже заложено природой, и мягко убрать напряжение, которое скрывает вашу настоящую красоту.</div>
+    </div>
+    <div class="final-tagline" data-slot="tagline">«Именно для этого<br>создан этот курс.»</div>
+  </div>
+
+  <!-- ═══ DISCLAIMER ═══ -->
+  <div class="disclaimer">
+    Это предварительный визуальный AI-разбор по фото. Не медицинское заключение и не замена консультации специалиста.
+  </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+// JSON DATA — replace this object with AI output
+// ════════════════════════════════════════════════════════════════════
+const protocolData = {
+  user: {
+    name: "Гость",
+    date: "Дата протокола"
+  },
+
+  images: {
+    face_url: ""  // URL or base64 of user photo
+  },
+
+  block_01_bio_age: {
+    estimated_age: 37,
+    score: 78,
+    description: "Кожа плотная и ухоженная; возраст задают межбровный зажим и усталость взгляда."
+  },
+
+  block_02_skin_type: {
+    type: "Комбинированная, склонная к обезвоженности",
+    description: "У вас комбинированная кожа с легкой склонностью к обезвоженности. Плюс этого типа — кожа хорошо держит каркас лица. Центральная зона просит больше влаги; при мягком уходе тон выглядит свежее и ровнее.",
+    features: [
+      "Плюс: кожа держит каркас лица.",
+      "Фокус: влага и ровное сияние."
+    ]
+  },
+
+  block_03_strengths: {
+    compliment: "Мягкая форма лица, скулы и выразительный взгляд уже создают красивую природную базу.",
+    items: [
+      "Форма лица и овал выглядят гармонично.",
+      "Скулы дают природную опору, которую часто усиливают процедурами.",
+      "Глаза, симметрия и пропорции создают выразительность."
+    ]
+  },
+
+  block_04_face_aging: {
+    aging_type: "Усталый / смешанный",
+    description: [
+      "Ведущий фактор — свежесть взгляда, носогубная зона и мягкий тонус.",
+      "Овал выглядит ресурсно, но нижняя треть зависит от шеи и оттока.",
+      "Главный фокус — вернуть лицу легкость и спокойную собранность."
+    ]
+  },
+
+  zone_map: {
+    zones: [
+      { id: 1, name: "Лоб",             status: "yellow", cx: 150, cy: 75  },
+      { id: 2, name: "Межбровье",       status: "red",    cx: 185, cy: 110 },
+      { id: 3, name: "Зона глаз",       status: "yellow", cx: 105, cy: 145 },
+      { id: 4, name: "Носогубная зона", status: "yellow", cx: 150, cy: 220 },
+      { id: 5, name: "Скулы",           status: "green",  cx: 200, cy: 175 },
+      { id: 6, name: "Овал лица",       status: "green",  cx: 140, cy: 290 }
+    ]
+  },
+
+  block_05_why: {
+    text: "Без грамотного ухода и поддержки именно вашего типа старения зона глаз, носогубка и уголки рта к вечеру могут сильнее выдавать усталость. Микроциркуляция и мягкий тонус возвращают свежесть.",
+    reasons: [
+      "Зона глаз первой показывает усталость и недосып.",
+      "Носогубная зона сильнее считывается, когда средней трети не хватает свежести.",
+      "Шея и отток помогают нижней трети выглядеть легче."
+    ]
+  },
+
+  block_07_facefitness_benefits: {
+    text: "Фейс-фитнес для вас — способ вернуть лицу отдохнувшее выражение без изменения черт. Работа с шеей, лимфотоком и мягким тонусом освежает взгляд, смягчает носогубную зону и помогает уголкам рта выглядеть легче.",
+    items: [
+      "Вернет взгляду больше свежести через мягкую микроциркуляцию.",
+      "Поддержит носогубную зону и уголки рта без перегруза.",
+      "Поможет овалу выглядеть собраннее через шею и отток."
+    ]
+  },
+
+  block_08_timeline: {
+    intro: "Если ты начнёшь заниматься по нашей системе:",
+    items: [
+      "Через 2 недели — взгляд может выглядеть свежее.",
+      "Через 3–4 недели — носогубная зона мягче.",
+      "Через 6–8 недель — овал и тонус устойчивее."
+    ]
+  },
+
+  block_06_age_changes: {
+    title: "Первые изменения по возрасту",
+    text: "Для вашего типа старения в 30–35 лет обычно глаза и уголки рта быстрее выдают усталость. В 35–40 — свежесть и тонус возвращаются медленнее. Сейчас — лучшее время начать."
+  },
+
+  final_summary: "У вас красивое лицо с сильной природной базой. Главное сейчас — раскрыть то, что уже заложено природой, и мягко убрать напряжение, которое скрывает вашу настоящую красоту.",
+
+  tagline: "«Именно для этого создан этот курс.»"
+};
+
+
+// ════════════════════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════════════════════
+
+function renderProtocol(d) {
+  const strengthsBlock = d.block_03_strengths || d.block_06_strengths || {};
+  const agingBlock = d.block_04_face_aging || d.block_03_face_aging || {};
+  const zoneMap = d.zone_map || d.block_zone_map || d.block_04_zone_map || {};
+  const ageChangesBlock = d.block_06_age_changes || d.block_09_age_changes || {};
+
+  // User
+  setText("user-name", d.user.name);
+  setText("date", d.user.date);
+
+  // 01 Bio Age
+  setText("bio-age", d.block_01_bio_age.estimated_age);
+  const age = parseInt(d.block_01_bio_age.estimated_age, 10);
+  setText("bio-age-unit", ageUnit(age));
+  setText("score", d.block_01_bio_age.score);
+  setText("bio-desc", d.block_01_bio_age.description);
+  setText("passport-age", d.block_01_bio_age.passport_age ? `паспортный возраст: ${d.block_01_bio_age.passport_age} ${ageUnit(parseInt(d.block_01_bio_age.passport_age, 10))}` : "");
+
+  // 02 Skin
+  setText("skin-type", d.block_02_skin_type.type);
+  setText("skin-desc", d.block_02_skin_type.description);
+
+  // 03 Strengths
+  setTextOrHide("strengths-compliment", strengthsBlock.compliment);
+  setList("strengths", strengthsBlock.items);
+
+  // Zone map (not numbered in the protocol)
+  renderZones(zoneMap);
+  if (d.images.face_url) {
+    const faceImg = document.querySelector('[data-slot="face-img"]');
+    faceImg.style.display = 'block';
+    faceImg.src = d.images.face_url;
+    faceImg.style.objectPosition = d.images.face_object_position || '50% 58%';
+  }
+
+  // 05 Why
+  setText("why-text", d.block_05_why.text);
+
+  // 04 Aging
+  setText("aging-type", agingBlock.aging_type);
+  setText("aging-desc-text", agingBlock.description);
+
+  // 07 FF benefits
+  setText("ff-benefits-text", d.block_07_facefitness_benefits.text);
+  setList("ff-benefits", d.block_07_facefitness_benefits.items);
+
+  // 08 Timeline
+  setText("timeline-intro", d.block_08_timeline.intro);
+  setList("timeline", d.block_08_timeline.items);
+
+  // 06 Age Changes
+  if (ageChangesBlock && ageChangesBlock.text) {
+    setText("age-changes-text", ageChangesBlock.text);
+    const titleEl = document.getElementById('age-changes-title');
+    if (titleEl && ageChangesBlock.title) titleEl.textContent = ageChangesBlock.title;
+  }
+
+  // Final
+  setText("final-summary", d.final_summary);
+  const tagEl = document.querySelector('[data-slot="tagline"]');
+  if (tagEl && d.tagline) tagEl.innerHTML = esc(d.tagline).replace(/\n/g, '<br>');
+}
+
+
+// ═══ Zone overlay + list ═══
+function renderZones(zoneMapOrZones) {
+  const svg = document.querySelector('[data-slot="zone-overlay"]');
+  const list = document.querySelector('[data-slot="zone-list"]');
+  if (!svg || !list) return;
+  const zoneMap = Array.isArray(zoneMapOrZones) ? { zones: zoneMapOrZones } : (zoneMapOrZones || {});
+  const zones = zoneMap.zones || [];
+
+  const colorMap = {
+    green:  { fill: 'rgba(112,162,103,0.38)',  stroke: 'rgba(112,162,103,0.88)' },
+    yellow: { fill: 'rgba(235,210,74,0.44)',   stroke: 'rgba(196,160,64,0.88)' },
+    orange: { fill: 'rgba(235,186,74,0.42)',   stroke: 'rgba(200,140,70,0.90)' },
+    red:    { fill: 'rgba(208,92,76,0.40)',    stroke: 'rgba(192,96,72,0.92)' }
+  };
+
+  svg.innerHTML = '';
+  const ns = "http://www.w3.org/2000/svg";
+  const defs = document.createElementNS(ns, "defs");
+  defs.innerHTML = `
+    <filter id="zoneSoftBlur" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="1.35" result="blur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="1.18"/>
+      </feComponentTransfer>
+    </filter>
+  `;
+  svg.appendChild(defs);
+
+  function num(value, fallback = 50) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return n > 100 ? n / 3 : n;
+  }
+
+  function pointsToPath(points, close = true) {
+    const safe = (points || []).filter(p => Number.isFinite(Number(p.x)) && Number.isFinite(Number(p.y)));
+    if (safe.length < 2) return "";
+    const path = safe.map((p, i) => `${i ? "L" : "M"} ${num(p.x).toFixed(2)} ${num(p.y).toFixed(2)}`).join(" ");
+    return close ? `${path} Z` : path;
+  }
+
+  function addFillElement(el, status, clipId) {
+    const c = colorMap[status] || colorMap.yellow;
+    el.setAttribute("fill", c.fill);
+    el.setAttribute("class", "zone-soft-fill");
+    if (clipId) el.setAttribute("clip-path", `url(#${clipId})`);
+    svg.appendChild(el);
+  }
+
+  const facePath = pointsToPath(zoneMap.contours && zoneMap.contours.face_oval, true);
+  const faceClipId = facePath ? "zoneFaceClip" : "";
+  if (facePath) {
+    const clip = document.createElementNS(ns, "clipPath");
+    clip.setAttribute("id", faceClipId);
+    clip.setAttribute("clipPathUnits", "userSpaceOnUse");
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", facePath);
+    clip.appendChild(path);
+    defs.appendChild(clip);
+  }
+
+  const paintable = new Set(["forehead", "cheeks", "mouth_area"]);
+  const canRenderDetailedMap = !zoneMap.quality || zoneMap.quality.ok !== false;
+  zones.forEach(z => {
+    const status = z.status || 'yellow';
+    const zoneId = String(z.zone_id || '').toLowerCase();
+    const shape = z.shape || {};
+    if (canRenderDetailedMap && paintable.has(zoneId)) {
+      if (Array.isArray(shape.polygons) && shape.polygons.length) {
+        shape.polygons.forEach(poly => {
+          const d = pointsToPath(poly, true);
+          if (!d) return;
+          const path = document.createElementNS(ns, "path");
+          path.setAttribute("d", d);
+          addFillElement(path, status, faceClipId);
+        });
+      } else {
+        const parts = Array.isArray(shape.shapes) && shape.shapes.length ? shape.shapes : [shape];
+        parts.forEach(part => {
+          const cx = num(part.x ?? z.cx);
+          const cy = num(part.y ?? z.cy);
+          const rx = Math.max(2.6, num(part.width ?? 18) / 2);
+          const ry = Math.max(2.2, num(part.height ?? 10) / 2);
+          const ellipse = document.createElementNS(ns, "ellipse");
+          ellipse.setAttribute("cx", cx);
+          ellipse.setAttribute("cy", cy);
+          ellipse.setAttribute("rx", rx);
+          ellipse.setAttribute("ry", ry);
+          const rotation = Number(part.rotation || shape.rotation || 0);
+          if (rotation) ellipse.setAttribute("transform", `rotate(${rotation} ${cx} ${cy})`);
+          addFillElement(ellipse, status, faceClipId);
+        });
+      }
+    }
+  });
+
+  zones.forEach(z => {
+    const markerX = num((z.anchor && z.anchor.x) ?? z.cx);
+    const markerY = num((z.anchor && z.anchor.y) ?? z.cy);
+    const text = document.createElementNS(ns, "text");
+    text.setAttribute("x", markerX);
+    text.setAttribute("y", markerY + 1.25);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("font-family", "Cormorant Garamond, serif");
+    text.setAttribute("font-weight", "700");
+    text.setAttribute("font-size", "5.2");
+    text.setAttribute("fill", "#111111");
+    text.textContent = z.id;
+    svg.appendChild(text);
+  });
+
+  // List
+  list.innerHTML = zones.map(z =>
+    `<div class="zone-item"><span class="zn">${z.id}</span> ${esc(z.name)}</div>`
+  ).join('');
+}
+
+
+// ═══ Helpers ═══
+function setText(slot, val) {
+  const textValue = Array.isArray(val) ? val.join('\n\n') : String(val ?? '');
+  if (textValue.trim() === '') return;  // keep default on empty
+  document.querySelectorAll(`[data-slot="${slot}"]`).forEach(el => {
+    el.textContent = textValue;
+  });
+}
+
+function setTextOrHide(slot, val) {
+  const textValue = Array.isArray(val) ? val.join('\n\n') : String(val ?? '');
+  const has = textValue.trim() !== '';
+  document.querySelectorAll(`[data-slot="${slot}"]`).forEach(el => {
+    if (has) { el.textContent = textValue; el.style.display = ''; }
+    else { el.style.display = 'none'; }
+  });
+}
+
+function setList(slot, items) {
+  if (!items) return;
+  document.querySelectorAll(`[data-slot="${slot}"]`).forEach(ul => {
+    ul.innerHTML = items.map(t =>
+      `<li>${esc(t)}</li>`
+    ).join('');
+  });
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+
+function ageUnit(n) {
+  if (isNaN(n)) return 'лет';
+  const m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 14) return 'лет';
+  if (m10 === 1) return 'год';
+  if (m10 >= 2 && m10 <= 4) return 'года';
+  return 'лет';
+}
+
+window.preloadProtocolImages = function(){
+  const images = Array.from(document.querySelectorAll('img[data-protocol-image]'))
+    .filter(img => img.style.display !== "none" && img.src);
+
+  return Promise.all(
+    images.map(img => {
+      if (!img.src || img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        img.onload = resolve;
+        img.onerror = resolve;
+      });
+    })
+  ).then(() => {
+    if (document.fonts && document.fonts.ready) return document.fonts.ready;
+  });
+};
+
+
+// ═══ Boot ═══
+renderProtocol(protocolData);
+window.renderProtocol = renderProtocol;
+</script>
+
+</body>
+</html>

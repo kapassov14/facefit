@@ -18,8 +18,8 @@ def _make_image(path: Path, color: str) -> None:
 
 
 def main() -> None:
-    assert "realistic face fitness transformation" in UNIVERSAL_AFTER_PHOTO_PROMPT
-    assert "reduce lower-face heaviness by 30%" in UNIVERSAL_AFTER_PHOTO_PROMPT
+    assert "after face fitness transformation" in UNIVERSAL_AFTER_PHOTO_PROMPT
+    assert "reduce heaviness in the lower third of the face by 45-60%" in UNIVERSAL_AFTER_PHOTO_PROMPT
     assert "different person" in UNIVERSAL_NEGATIVE_PROMPT
     for intensity in ("subtle", "balanced", "visible"):
         payload = build_after_photo_prompt(intensity)
@@ -27,7 +27,7 @@ def main() -> None:
         assert payload["attempt_index"] == 1
         assert payload["negative_prompt"]
     assert "stronger visible lift" in build_after_photo_prompt("balanced", attempt_index=2)["prompt"]
-    assert "strongest realistic lift" in build_after_photo_prompt("balanced", attempt_index=3)["prompt"]
+    assert "maximum visible face-fitness lift" in build_after_photo_prompt("balanced", attempt_index=3)["prompt"]
 
     good = AfterPhotoQualityResult(
         variant_path="/tmp/approved.png",

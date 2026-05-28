@@ -1,0 +1,1225 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Протокол · Bella Vladi</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Light, warm palette · cream + beige + graphite */
+    --bg-0:#f7f2ea;
+    --bg-1:#fbf7f0;
+    --bg-2:#f1e9dc;
+    --card:#ffffff;
+    --card-2:#fdfaf4;
+    --line:rgba(120, 90, 55, 0.18);
+    --line-strong:rgba(120, 90, 55, 0.35);
+    --gold-1:#caa472;
+    --gold-2:#a5824f;
+    --gold-3:#7a5d33;
+    --gold-glow:rgba(165,130,79,0.18);
+    --beige-1:#e9dcc6;
+    --beige-2:#d9c7a8;
+    --text:#1c1814;
+    --text-dim:#564a3c;
+    --text-mute:#8a7c68;
+    --pain:#a85e3e;
+    --shadow-1:0 20px 50px -20px rgba(120,90,55,0.25), 0 0 0 1px rgba(120,90,55,0.06);
+    --shadow-2:0 40px 90px -30px rgba(120,90,55,0.30), 0 0 0 1px rgba(120,90,55,0.08);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#ebe3d2;color:var(--text);font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased;font-smooth:always}
+  body{display:flex;flex-direction:column;align-items:center;gap:40px;padding:40px 20px;min-height:100vh}
+
+  /* ───────── Format switcher ───────── */
+  .switcher{
+    position:fixed;top:16px;right:16px;z-index:1000;
+    display:flex;gap:6px;padding:6px;
+    background:rgba(255,253,248,.92);backdrop-filter:blur(20px);
+    border:1px solid var(--line);border-radius:999px;
+    font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    box-shadow:0 10px 30px -10px rgba(120,90,55,.25)
+  }
+  .switcher button{
+    background:transparent;color:var(--text-dim);border:0;
+    padding:8px 14px;border-radius:999px;cursor:pointer;
+    font-family:inherit;font-size:inherit;letter-spacing:inherit;font-weight:500
+  }
+  .switcher button.active{background:linear-gradient(135deg,var(--gold-1),var(--gold-2));color:#ffffff}
+
+  /* ───────── Protocol canvas ───────── */
+  .protocol{
+    position:relative;
+    background:
+      radial-gradient(ellipse 80% 40% at 50% 0%, rgba(202,164,114,.10), transparent 60%),
+      radial-gradient(ellipse 60% 30% at 50% 100%, rgba(202,164,114,.06), transparent 60%),
+      linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 50%, var(--bg-2) 100%);
+    color:var(--text);
+    overflow:hidden;
+    box-shadow:var(--shadow-2);
+    isolation:isolate;
+  }
+  .protocol::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(circle at 0% 0%, rgba(202,164,114,.10), transparent 25%),
+      radial-gradient(circle at 100% 100%, rgba(202,164,114,.07), transparent 30%);
+    z-index:0;
+  }
+  .protocol::after{
+    /* subtle paper grain */
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.06;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    z-index:1;
+  }
+
+  /* Desktop export (1600x1200) */
+  .protocol.desk{width:1600px;height:1200px;padding:34px 44px 30px;display:grid;grid-template-rows:auto 1fr auto auto;gap:18px}
+
+  /* Mobile (1080x1350) */
+  .protocol.mob{width:1080px;height:1350px;padding:40px 36px 32px;display:grid;grid-template-rows:auto 1fr auto auto;gap:22px}
+
+  /* ───────── Header ───────── */
+  .head{position:relative;z-index:2;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px}
+  .head .brand{display:flex;align-items:center;gap:12px}
+  .head .brand-mark{
+    width:40px;height:40px;border-radius:50%;
+    background:linear-gradient(135deg,var(--gold-1) 0%, var(--gold-2) 50%, var(--gold-3) 100%);
+    display:grid;place-items:center;color:#ffffff;font-family:'Playfair Display',serif;font-weight:600;font-size:18px;
+    box-shadow:0 0 0 1px rgba(165,130,79,.45), 0 6px 16px var(--gold-glow);
+  }
+  .head .brand-name{font-family:'Playfair Display',serif;font-size:18px;letter-spacing:.4em;text-transform:uppercase;color:var(--text);font-weight:500}
+  .head .brand-sub{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-mute);margin-top:3px;font-weight:500}
+
+  .head .title-wrap{text-align:center}
+  .head .title{
+    font-family:'Playfair Display',serif;font-weight:400;
+    font-size:40px;line-height:1.08;letter-spacing:.005em;color:var(--text);
+  }
+  .head .title em{
+    font-style:italic;font-weight:500;
+    background:linear-gradient(180deg,var(--gold-2),var(--gold-3));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .head .subtitle{margin-top:10px;font-size:14px;line-height:1.45;letter-spacing:.08em;color:var(--text-dim);text-transform:none;font-weight:400}
+
+  .head .meta{text-align:right;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-mute);line-height:1.6;font-weight:500}
+  .head .meta strong{color:var(--gold-3);font-weight:600;letter-spacing:.22em}
+
+  .disclaimer{
+    grid-column:1/-1;
+    margin-top:2px;
+    font-size:12px;line-height:1.45;color:var(--text-mute);letter-spacing:.02em;
+    text-align:center;font-style:italic;
+    padding-top:14px;border-top:1px solid var(--line);
+    font-weight:400;
+  }
+  .mob .head{grid-template-columns:auto 1fr auto;text-align:left}
+  .mob .head .title-wrap{text-align:left}
+  .mob .head .title{font-size:36px}
+  .mob .head .meta{display:none}
+
+  /* ───────── 3-column body ───────── */
+  .body{position:relative;z-index:2;display:grid;gap:18px}
+  .desk .body{grid-template-columns:1.08fr .84fr 1.08fr;gap:20px;min-height:0}
+  .mob .body{grid-template-columns:1fr;gap:24px}
+
+  /* ───────── Column card (A, C) ───────── */
+  .col{
+    position:relative;
+    background:linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:24px 22px 20px;
+    display:grid;grid-template-rows:auto 1fr auto auto;gap:16px;
+    box-shadow:var(--shadow-1);
+    overflow:hidden;
+  }
+  .col::before{
+    content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+    background:linear-gradient(180deg,rgba(202,164,114,.06),transparent 30%);
+  }
+
+  /* ───────── Point header (badge + title) ───────── */
+  .pt-head{display:flex;align-items:center;gap:14px;position:relative;z-index:2}
+  .badge{
+    width:48px;height:48px;border-radius:50%;
+    background:radial-gradient(circle at 30% 25%, #f0d8a8, var(--gold-2) 55%, var(--gold-3) 100%);
+    display:grid;place-items:center;
+    font-family:'Playfair Display',serif;font-weight:600;font-size:24px;color:#ffffff;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.45),
+      inset 0 -2px 4px rgba(120,90,55,.25),
+      0 0 0 1px rgba(165,130,79,.45),
+      0 6px 14px var(--gold-glow);
+    flex-shrink:0;
+    text-shadow:0 1px 1px rgba(80,55,25,.25);
+  }
+  .pt-titles .kicker{
+    font-family:'Playfair Display',serif;font-size:19px;letter-spacing:.32em;
+    color:var(--text);text-transform:uppercase;line-height:1;font-weight:500
+  }
+  .pt-titles .sub{
+    margin-top:8px;font-size:11px;letter-spacing:.22em;color:var(--gold-3);text-transform:uppercase;
+    padding:5px 10px;border:1px solid var(--line-strong);border-radius:4px;display:inline-block;
+    background:rgba(202,164,114,.10);font-weight:600;
+  }
+
+  /* ───────── Photo + arrows ───────── */
+  .photo-stage{
+    position:relative;border-radius:18px;overflow:visible;
+    aspect-ratio:1/1.05;
+    background:transparent;
+  }
+  .mob .photo-stage{aspect-ratio:auto;height:400px}
+  .photo-frame{
+    position:absolute;left:30%;right:30%;top:0;bottom:0;
+    border-radius:14px;overflow:hidden;
+    background:linear-gradient(180deg,#efe4d2,#dccbac);
+    box-shadow:inset 0 0 0 1px var(--line-strong), 0 18px 36px -10px rgba(120,90,55,.30);
+  }
+  .photo-frame img{
+    width:100%;height:100%;object-fit:cover;display:block;
+    filter:contrast(1.02) saturate(1.0);
+  }
+  .photo-frame::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      linear-gradient(180deg, rgba(120,90,55,.05) 0%, transparent 25%, transparent 80%, rgba(120,90,55,.10) 100%);
+  }
+  .photo-fallback{
+    position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    color:var(--text-mute);font-size:11px;letter-spacing:.2em;text-transform:uppercase;text-align:center;padding:20px;font-weight:500;
+  }
+  .photo-fallback svg{width:48px;height:48px;opacity:.55}
+  .photo-fallback .ttl{color:var(--gold-3);font-family:'Playfair Display',serif;font-size:18px;letter-spacing:.08em;font-weight:500}
+
+  .arrows-svg{
+    position:absolute;inset:0;width:100%;height:100%;
+    pointer-events:none;overflow:visible;
+  }
+  .arrows-svg .line{
+    stroke:var(--gold-3);stroke-width:.7;fill:none;
+    stroke-dasharray:0;opacity:.85;
+  }
+  .arrows-svg .dot{fill:var(--gold-2);stroke:var(--gold-3);stroke-width:.4}
+  .arrows-svg .dot-outer{fill:none;stroke:var(--gold-2);stroke-width:.5;opacity:.65}
+
+  .anchor-labels{position:absolute;inset:0;pointer-events:none}
+  .label{
+    position:absolute;font-size:12px;line-height:1.35;color:var(--text);letter-spacing:.01em;
+    max-width:130px;font-weight:500;
+  }
+  .label.left{text-align:right;right:auto}
+  .label.right{text-align:left;left:auto}
+  .mob .label{font-size:11px;max-width:160px}
+
+  /* ───────── Pain / Result block ───────── */
+  .list-block{
+    position:relative;z-index:2;
+    border-top:1px solid var(--line);
+    padding-top:16px;
+  }
+  .list-block h4{
+    font-family:'Playfair Display',serif;
+    font-size:18px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-3);
+    margin-bottom:12px;font-weight:600;
+  }
+  .list-block ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+  .list-block li{
+    display:grid;grid-template-columns:16px 1fr;gap:10px;align-items:start;
+    font-size:13.5px;line-height:1.45;color:var(--text);font-weight:400;
+  }
+  .list-block li .mark{
+    color:var(--gold-3);font-size:13px;line-height:1.45;
+    width:16px;text-align:center;font-weight:700;
+  }
+  .col.a .list-block li .mark{color:var(--pain)}
+  .col.c .list-block li .mark{color:var(--gold-2)}
+
+  /* ───────── Influence block ───────── */
+  .influence{
+    position:relative;z-index:2;
+    padding:14px 16px;border-radius:12px;
+    background:linear-gradient(180deg,rgba(233,220,198,.55),rgba(233,220,198,.25));
+    border:1px solid var(--line);
+    font-size:12.5px;line-height:1.55;color:var(--text-dim);font-weight:400;
+  }
+  .influence .lbl{display:block;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-3);margin-bottom:5px;font-weight:600}
+
+  /* ───────── Center column B ───────── */
+  .col.b{
+    background:linear-gradient(180deg,#fbf5e8,#f3e8d2);
+    padding:24px 22px;
+    display:grid;grid-template-rows:auto auto 1fr auto;gap:16px;
+    border:1px solid var(--line-strong);
+  }
+  .b-hero{
+    position:relative;z-index:2;
+    padding:18px 18px 16px;
+    border:1px solid var(--line-strong);
+    border-radius:14px;
+    text-align:center;
+    background:linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.3));
+  }
+  .b-hero .eyebrow{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-3);margin-bottom:8px;font-weight:600}
+  .b-hero .ttl{font-family:'Playfair Display',serif;font-size:22px;line-height:1.2;color:var(--text);font-weight:500}
+  .b-hero .ttl em{font-style:italic;color:var(--gold-3);font-weight:600}
+
+  .system-list{position:relative;z-index:2;display:flex;flex-direction:column;gap:10px}
+  .system-list .item{
+    display:grid;grid-template-columns:40px 1fr;gap:14px;align-items:center;
+    padding:11px 12px;border-radius:10px;
+    background:linear-gradient(90deg, rgba(255,255,255,.85), rgba(255,255,255,.55));
+    border:1px solid var(--line);
+  }
+  .system-list .ico{
+    width:40px;height:40px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, #f5e6cb, var(--beige-2));
+    border:1px solid var(--line-strong);
+    display:grid;place-items:center;color:var(--gold-3);
+  }
+  .system-list .ico svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .system-list .txt .t{font-size:12.5px;font-weight:600;letter-spacing:.10em;text-transform:uppercase;color:var(--text);line-height:1.2}
+  .system-list .txt .d{font-size:12px;color:var(--text-dim);margin-top:3px;line-height:1.35;font-weight:400}
+
+  .proof{position:relative;z-index:2;padding-top:12px;border-top:1px solid var(--line)}
+  .proof ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .proof li{
+    display:grid;grid-template-columns:16px 1fr;gap:10px;align-items:start;
+    font-size:12.5px;color:var(--text);line-height:1.4;font-weight:400;
+  }
+  .proof li .mark{color:var(--gold-3);font-weight:700}
+  .proof .bridge{margin-top:10px;font-size:12px;color:var(--text-dim);font-style:italic;line-height:1.55;border-top:1px dashed var(--line);padding-top:10px;font-weight:400}
+
+  /* ───────── Transformation path ───────── */
+  .path{
+    position:relative;z-index:2;
+    display:grid;grid-template-columns:auto 1fr auto 1fr auto;align-items:center;gap:18px;
+    padding:20px 24px;
+    border:1px solid var(--line);
+    border-radius:18px;
+    background:linear-gradient(180deg,rgba(255,255,255,.65),rgba(255,255,255,.35));
+  }
+  .path .node{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:140px;text-align:center}
+  .path .node .b{
+    width:38px;height:38px;border-radius:50%;
+    background:radial-gradient(circle at 30% 25%, #f0d8a8, var(--gold-2) 55%, var(--gold-3) 100%);
+    color:#ffffff;display:grid;place-items:center;
+    font-family:'Playfair Display',serif;font-weight:600;font-size:18px;
+    box-shadow:0 0 0 1px rgba(165,130,79,.45), 0 6px 14px var(--gold-glow);
+    text-shadow:0 1px 1px rgba(80,55,25,.25);
+  }
+  .path .node .ttl{
+    font-family:'Playfair Display',serif;font-size:17px;color:var(--text);margin-top:4px;letter-spacing:.01em;font-weight:500;
+  }
+  .path .node .desc{font-size:12px;color:var(--text-dim);max-width:220px;line-height:1.45;letter-spacing:.01em;font-weight:400}
+  .path .arr{flex:1;display:flex;align-items:center;justify-content:center;padding:0 8px}
+  .path .arr svg{width:100%;height:14px;color:var(--gold-2)}
+  .mob .path{grid-template-columns:1fr;gap:14px;padding:18px}
+  .mob .path .arr{display:none}
+
+  /* ───────── CTA ───────── */
+  .cta{
+    position:relative;z-index:2;
+    display:grid;grid-template-columns:1.4fr auto auto;align-items:center;gap:18px;
+    padding:20px 26px;
+    border-radius:18px;
+    background:
+      radial-gradient(ellipse at 0% 50%, rgba(202,164,114,.18), transparent 60%),
+      linear-gradient(180deg, #fbf5e8, #f0e3c9);
+    border:1px solid var(--line-strong);
+  }
+  .cta .quote{font-family:'Playfair Display',serif;font-size:22px;line-height:1.3;color:var(--text);font-weight:400}
+  .cta .quote em{color:var(--gold-3);font-style:italic;font-weight:600}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:14px 22px;border-radius:999px;
+    font-family:'Manrope',sans-serif;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+    cursor:pointer;border:0;white-space:nowrap;
+  }
+  .btn.primary{
+    background:linear-gradient(135deg,var(--gold-1),var(--gold-2) 50%, var(--gold-3));
+    color:#ffffff;box-shadow:0 0 0 1px rgba(165,130,79,.45), 0 12px 28px -10px rgba(165,130,79,.50);
+    text-shadow:0 1px 1px rgba(80,55,25,.25);
+  }
+  .btn.ghost{
+    background:transparent;color:var(--text);
+    border:1px solid var(--line-strong);
+  }
+  .mob .cta{grid-template-columns:1fr;text-align:center;gap:14px}
+  .mob .cta .btn{justify-content:center}
+
+  /* The protocol image is diagnostic only; sales CTA lives outside it. */
+  .cta{display:none!important}
+
+  /* ───────── Mobile-specific tweaks ───────── */
+  .mob .col{padding:22px 20px}
+  .mob .pt-titles .kicker{font-size:21px}
+  .mob .pt-titles .sub{font-size:12px}
+  .mob .badge{width:54px;height:54px;font-size:26px}
+  .mob .b-hero .ttl{font-size:25px}
+  .mob .system-list .txt .t{font-size:13.5px}
+  .mob .system-list .txt .d{font-size:13px}
+  .mob .list-block h4{font-size:21px}
+  .mob .list-block li{font-size:14.5px}
+  .mob .influence{font-size:13.5px}
+  .mob .cta .quote{font-size:24px;text-align:center}
+
+  /* Backend export: readable Telegram preview, details live in the web report. */
+  .desk .col{padding:26px 24px 22px;gap:17px}
+  .desk .photo-stage{height:400px;aspect-ratio:auto}
+  .desk .photo-frame{left:29%;right:29%}
+  .desk .label{font-size:14.5px;line-height:1.35;max-width:145px;font-weight:600}
+  .desk .list-block{padding-top:14px}
+  .desk .list-block h4{font-size:20px;margin-bottom:12px}
+  .desk .list-block ul{gap:9px}
+  .desk .list-block li{font-size:16px;line-height:1.34;grid-template-columns:18px 1fr;gap:10px}
+  .desk .list-block li .mark{font-size:15px}
+  .desk .influence{padding:13px 15px;font-size:15px;line-height:1.42}
+  .desk .influence .lbl{font-size:11px;margin-bottom:6px}
+  .desk .influence{display:none}
+  .desk .col.b{padding:26px 20px 22px;gap:15px}
+  .desk .b-hero{padding:16px 14px 14px}
+  .desk .b-hero .eyebrow{font-size:10px;letter-spacing:.20em}
+  .desk .b-hero .ttl{font-size:21px;line-height:1.18}
+  .desk .system-list{gap:10px}
+  .desk .system-list .item{grid-template-columns:38px 1fr;padding:11px 10px;gap:11px}
+  .desk .system-list .ico{width:38px;height:38px}
+  .desk .system-list .txt .t{font-size:13.5px;line-height:1.18;letter-spacing:.06em}
+  .desk .system-list .txt .d{font-size:13px;line-height:1.32}
+  .desk .proof{padding-top:10px}
+  .desk .proof ul{gap:7px}
+  .desk .proof li{font-size:13.5px;line-height:1.32}
+  .desk .proof .bridge{display:none}
+  .desk .path{padding:16px 22px}
+  .desk .path .node .ttl{font-size:19px}
+  .desk .path .node .desc{font-size:13.5px;line-height:1.35}
+  .desk .cta{padding:17px 24px}
+  .desk .cta .quote{font-size:25px;line-height:1.25}
+  .desk .btn{padding:13px 18px;font-size:11.5px;letter-spacing:.12em}
+
+  /* Telegram export: full A/B/C structure, but as a tall readable protocol. */
+  body.fmt-mob .protocol.mob{
+    width:1080px;
+    height:auto;
+    min-height:1350px;
+    padding:44px 46px 42px;
+    grid-template-rows:auto auto auto;
+    gap:28px;
+    overflow:visible;
+  }
+  body.fmt-mob .mob .head{
+    grid-template-columns:auto 1fr;
+    gap:22px;
+    align-items:center;
+  }
+  body.fmt-mob .mob .head .brand-mark{width:62px;height:62px;font-size:28px}
+  body.fmt-mob .mob .head .brand-name{font-size:22px;letter-spacing:.34em}
+  body.fmt-mob .mob .head .brand-sub{font-size:13px}
+  body.fmt-mob .mob .head .title-wrap{text-align:left}
+  body.fmt-mob .mob .head .title{font-size:52px;line-height:1.04}
+  body.fmt-mob .mob .head .subtitle{font-size:22px;line-height:1.34;margin-top:10px;letter-spacing:.02em}
+  body.fmt-mob .mob .head .disclaimer{
+    grid-column:1/-1;
+    font-size:19px;
+    line-height:1.42;
+    padding-top:16px;
+    margin-top:0;
+  }
+  body.fmt-mob .mob .body{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:28px;
+    min-height:0;
+  }
+  body.fmt-mob .mob .col{
+    border-radius:28px;
+    padding:34px 32px 30px;
+    gap:24px;
+    overflow:visible;
+    min-height:0;
+  }
+  body.fmt-mob .mob .badge{width:70px;height:70px;font-size:36px}
+  body.fmt-mob .mob .pt-head{gap:20px}
+  body.fmt-mob .mob .pt-titles .kicker{font-size:34px;letter-spacing:.24em}
+  body.fmt-mob .mob .pt-titles .sub{font-size:17px;letter-spacing:.16em;padding:10px 14px;margin-top:10px}
+  body.fmt-mob .mob .photo-stage{height:690px;aspect-ratio:auto}
+  body.fmt-mob .mob .photo-frame{left:30%;right:30%;border-radius:24px}
+  body.fmt-mob .mob .label{font-size:22px;line-height:1.32;font-weight:700}
+  body.fmt-mob .mob .arrows-svg .line{stroke-width:1.1}
+  body.fmt-mob .mob .arrows-svg .dot{r:1}
+  body.fmt-mob .mob .list-block{padding-top:22px}
+  body.fmt-mob .mob .list-block h4{font-size:34px;letter-spacing:.20em;margin-bottom:18px}
+  body.fmt-mob .mob .list-block ul{gap:14px}
+  body.fmt-mob .mob .list-block li{
+    grid-template-columns:30px 1fr;
+    gap:14px;
+    font-size:27px;
+    line-height:1.34;
+  }
+  body.fmt-mob .mob .list-block li .mark{font-size:22px;line-height:1.34;width:30px}
+  body.fmt-mob .mob .influence{
+    display:block;
+    padding:22px 24px;
+    border-radius:18px;
+    font-size:24px;
+    line-height:1.42;
+  }
+  body.fmt-mob .mob .influence .lbl{font-size:16px;margin-bottom:10px}
+  body.fmt-mob .mob .b-hero{padding:28px 30px;border-radius:22px}
+  body.fmt-mob .mob .b-hero .eyebrow{font-size:16px;letter-spacing:.22em;margin-bottom:14px}
+  body.fmt-mob .mob .b-hero .ttl{font-size:40px;line-height:1.14}
+  body.fmt-mob .mob .system-list{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  body.fmt-mob .mob .system-list .item{padding:22px 22px;border-radius:18px;gap:18px}
+  body.fmt-mob .mob .system-list .ico{width:54px;height:54px}
+  body.fmt-mob .mob .system-list .txt .t{font-size:23px;letter-spacing:.04em}
+  body.fmt-mob .mob .system-list .txt .d{font-size:20px;line-height:1.34;margin-top:7px}
+  body.fmt-mob .mob .proof{display:block;padding-top:20px}
+  body.fmt-mob .mob .proof ul{gap:12px}
+  body.fmt-mob .mob .proof li{font-size:22px;line-height:1.35}
+  body.fmt-mob .mob .proof .bridge{display:block;font-size:21px;line-height:1.45;margin-top:16px;padding-top:16px}
+  body.fmt-mob .mob .path{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:18px;
+    padding:26px 28px;
+    border-radius:24px;
+  }
+  body.fmt-mob .mob .path .node .b{width:56px;height:56px;font-size:28px}
+  body.fmt-mob .mob .path .node .ttl{font-size:30px}
+  body.fmt-mob .mob .path .node .desc{font-size:22px;max-width:520px}
+
+  /* Hidden by default; toggled via JS */
+  .protocol.mob{display:none}
+  body.fmt-mob .protocol.desk{display:none}
+  body.fmt-mob .protocol.mob{display:grid}
+
+  /* Scale to viewport on small screens (for browsing preview only; export uses real size) */
+  @media (max-width: 1700px){
+    .protocol.desk{transform:scale(var(--s,.55));transform-origin:top center}
+    body{padding-bottom:calc(1200px * (1 - .55) * -1)}
+  }
+  @media (max-width: 1700px){
+    body.fmt-mob .protocol.mob{transform:scale(.55);transform-origin:top center}
+  }
+</style>
+</head>
+<body>
+
+<div class="switcher" role="tablist">
+  <button id="btn-desk" class="active" type="button">1600×1200</button>
+  <button id="btn-mob" type="button">1080×1350</button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     DESKTOP PROTOCOL · 1600×1200
+     ════════════════════════════════════════════════════════════════ -->
+<section class="protocol desk" id="protocol-desk" data-fmt="desk">
+  <!-- Header -->
+  <header class="head" data-slot="header">
+    <div class="brand" data-slot="brand">
+      <div class="brand-mark" data-slot="brand-mark"></div>
+      <div>
+        <div class="brand-name" data-slot="brand-name"></div>
+        <div class="brand-sub" data-slot="brand-sub"></div>
+      </div>
+    </div>
+    <div class="title-wrap">
+      <h1 class="title" data-slot="title"></h1>
+      <div class="subtitle" data-slot="subtitle"></div>
+    </div>
+    <div class="meta" data-slot="meta"></div>
+    <div class="disclaimer" data-slot="disclaimer"></div>
+  </header>
+
+  <!-- Body -->
+  <div class="body">
+    <!-- Column A -->
+    <article class="col a" data-slot="point-a">
+      <div class="pt-head">
+        <div class="badge">A</div>
+        <div class="pt-titles">
+          <div class="kicker" data-slot="a-title"></div>
+          <div class="sub" data-slot="a-sub"></div>
+        </div>
+      </div>
+      <div class="photo-stage" data-slot="a-stage">
+        <div class="photo-frame">
+          <img data-protocol-image data-slot="a-img" alt="Текущее состояние" />
+          <div class="photo-fallback" data-slot="a-fallback">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.5-3.5 4-5 7-5s5.5 1.5 7 5"/></svg>
+            <div class="ttl">Фото загружается</div>
+            <div>Подождите несколько секунд</div>
+          </div>
+        </div>
+        <svg class="arrows-svg" data-slot="a-arrows" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div class="anchor-labels" data-slot="a-labels"></div>
+      </div>
+      <div class="list-block">
+        <h4 data-slot="a-pains-title"></h4>
+        <ul data-slot="a-pains"></ul>
+      </div>
+      <div class="influence">
+        <span class="lbl" data-slot="a-influence-lbl"></span>
+        <span data-slot="a-influence"></span>
+      </div>
+    </article>
+
+    <!-- Column B -->
+    <article class="col b" data-slot="point-b">
+      <div class="pt-head">
+        <div class="badge">B</div>
+        <div class="pt-titles">
+          <div class="kicker" data-slot="b-title"></div>
+          <div class="sub" data-slot="b-sub"></div>
+        </div>
+      </div>
+      <div class="b-hero">
+        <div class="eyebrow" data-slot="b-eyebrow"></div>
+        <div class="ttl" data-slot="b-headline"></div>
+      </div>
+      <div class="system-list" data-slot="b-items"></div>
+      <div class="proof">
+        <ul data-slot="b-proof"></ul>
+        <div class="bridge" data-slot="b-bridge"></div>
+      </div>
+    </article>
+
+    <!-- Column C -->
+    <article class="col c" data-slot="point-c">
+      <div class="pt-head">
+        <div class="badge">C</div>
+        <div class="pt-titles">
+          <div class="kicker" data-slot="c-title"></div>
+          <div class="sub" data-slot="c-sub"></div>
+        </div>
+      </div>
+      <div class="photo-stage" data-slot="c-stage">
+        <div class="photo-frame">
+          <img data-protocol-image data-slot="c-img" alt="Возможный результат" />
+          <div class="photo-fallback" data-slot="c-fallback">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.5-3.5 4-5 7-5s5.5 1.5 7 5"/></svg>
+            <div class="ttl">Результат генерируется</div>
+            <div>AI создаёт визуализацию</div>
+          </div>
+        </div>
+        <svg class="arrows-svg" data-slot="c-arrows" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div class="anchor-labels" data-slot="c-labels"></div>
+      </div>
+      <div class="list-block">
+        <h4 data-slot="c-results-title"></h4>
+        <ul data-slot="c-results"></ul>
+      </div>
+      <div class="influence">
+        <span class="lbl" data-slot="c-influence-lbl"></span>
+        <span data-slot="c-influence"></span>
+      </div>
+    </article>
+  </div>
+
+  <!-- Transformation path -->
+  <div class="path" data-slot="path">
+    <div class="node"><div class="b">A</div><div class="ttl" data-slot="path-a-title"></div><div class="desc" data-slot="path-a-desc"></div></div>
+    <div class="arr"><svg viewBox="0 0 100 10" preserveAspectRatio="none"><line x1="0" y1="5" x2="92" y2="5" stroke="currentColor" stroke-width=".5" stroke-dasharray="2 2"/><polygon points="92,2 100,5 92,8" fill="currentColor"/></svg></div>
+    <div class="node"><div class="b">B</div><div class="ttl" data-slot="path-b-title"></div><div class="desc" data-slot="path-b-desc"></div></div>
+    <div class="arr"><svg viewBox="0 0 100 10" preserveAspectRatio="none"><line x1="0" y1="5" x2="92" y2="5" stroke="currentColor" stroke-width=".5" stroke-dasharray="2 2"/><polygon points="92,2 100,5 92,8" fill="currentColor"/></svg></div>
+    <div class="node"><div class="b">C</div><div class="ttl" data-slot="path-c-title"></div><div class="desc" data-slot="path-c-desc"></div></div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta" data-slot="cta">
+    <div class="quote" data-slot="cta-quote"></div>
+    <button class="btn primary" data-slot="cta-primary" type="button"></button>
+    <button class="btn ghost" data-slot="cta-secondary" type="button"></button>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     MOBILE PROTOCOL · 1080×1350
+     ════════════════════════════════════════════════════════════════ -->
+<section class="protocol mob" id="protocol-mob" data-fmt="mob">
+  <header class="head">
+    <div class="brand">
+      <div class="brand-mark" data-slot="brand-mark"></div>
+      <div>
+        <div class="brand-name" data-slot="brand-name"></div>
+        <div class="brand-sub" data-slot="brand-sub"></div>
+      </div>
+    </div>
+    <div class="title-wrap">
+      <h1 class="title" data-slot="title"></h1>
+      <div class="subtitle" data-slot="subtitle"></div>
+    </div>
+    <div class="meta" data-slot="meta"></div>
+    <div class="disclaimer" data-slot="disclaimer"></div>
+  </header>
+
+  <div class="body">
+    <article class="col a">
+      <div class="pt-head">
+        <div class="badge">A</div>
+        <div class="pt-titles">
+          <div class="kicker" data-slot="a-title"></div>
+          <div class="sub" data-slot="a-sub"></div>
+        </div>
+      </div>
+      <div class="photo-stage">
+        <div class="photo-frame">
+          <img data-protocol-image data-slot="a-img" alt="Текущее состояние" />
+          <div class="photo-fallback" data-slot="a-fallback">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.5-3.5 4-5 7-5s5.5 1.5 7 5"/></svg>
+            <div class="ttl">Фото загружается</div>
+          </div>
+        </div>
+        <svg class="arrows-svg" data-slot="a-arrows" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div class="anchor-labels" data-slot="a-labels"></div>
+      </div>
+      <div class="list-block">
+        <h4 data-slot="a-pains-title"></h4>
+        <ul data-slot="a-pains"></ul>
+      </div>
+      <div class="influence">
+        <span class="lbl" data-slot="a-influence-lbl"></span>
+        <span data-slot="a-influence"></span>
+      </div>
+    </article>
+
+    <article class="col b">
+      <div class="pt-head">
+        <div class="badge">B</div>
+        <div class="pt-titles">
+          <div class="kicker" data-slot="b-title"></div>
+          <div class="sub" data-slot="b-sub"></div>
+        </div>
+      </div>
+      <div class="b-hero">
+        <div class="eyebrow" data-slot="b-eyebrow"></div>
+        <div class="ttl" data-slot="b-headline"></div>
+      </div>
+      <div class="system-list" data-slot="b-items"></div>
+      <div class="proof">
+        <ul data-slot="b-proof"></ul>
+        <div class="bridge" data-slot="b-bridge"></div>
+      </div>
+    </article>
+
+    <article class="col c">
+      <div class="pt-head">
+        <div class="badge">C</div>
+        <div class="pt-titles">
+          <div class="kicker" data-slot="c-title"></div>
+          <div class="sub" data-slot="c-sub"></div>
+        </div>
+      </div>
+      <div class="photo-stage">
+        <div class="photo-frame">
+          <img data-protocol-image data-slot="c-img" alt="Возможный результат" />
+          <div class="photo-fallback" data-slot="c-fallback">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.5-3.5 4-5 7-5s5.5 1.5 7 5"/></svg>
+            <div class="ttl">Результат генерируется</div>
+          </div>
+        </div>
+        <svg class="arrows-svg" data-slot="c-arrows" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div class="anchor-labels" data-slot="c-labels"></div>
+      </div>
+      <div class="list-block">
+        <h4 data-slot="c-results-title"></h4>
+        <ul data-slot="c-results"></ul>
+      </div>
+      <div class="influence">
+        <span class="lbl" data-slot="c-influence-lbl"></span>
+        <span data-slot="c-influence"></span>
+      </div>
+    </article>
+  </div>
+
+  <div class="path">
+    <div class="node"><div class="b">A</div><div class="ttl" data-slot="path-a-title"></div><div class="desc" data-slot="path-a-desc"></div></div>
+    <div class="node"><div class="b">B</div><div class="ttl" data-slot="path-b-title"></div><div class="desc" data-slot="path-b-desc"></div></div>
+    <div class="node"><div class="b">C</div><div class="ttl" data-slot="path-c-title"></div><div class="desc" data-slot="path-c-desc"></div></div>
+  </div>
+
+  <div class="cta">
+    <div class="quote" data-slot="cta-quote"></div>
+    <button class="btn primary" data-slot="cta-primary" type="button"></button>
+    <button class="btn ghost" data-slot="cta-secondary" type="button"></button>
+  </div>
+</section>
+
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+// BACKEND: replace protocolData with real AI JSON here
+// ════════════════════════════════════════════════════════════════════
+const protocolData = {{ protocol_data_json | safe }};
+const previewProtocolData = {
+  brand: {
+    initial: "BV",
+    name: "BELLA VLADI",
+    tagline: "Эксперт по фейсфитнесу"
+  },
+  header: {
+    title_main: "Как выглядит ваша",
+    title_accent: "трансформация",
+    title_tail: "с курсом",
+    subtitle: "Персональная карта лица — текущие зоны внимания, система работы и возможный результат",
+    meta_top: "ПЕРСОНАЛЬНЫЙ ПРОТОКОЛ",
+    meta_id: "ID · BV-7421",
+    meta_date: "22 · 05 · 2026",
+    disclaimer: "Это визуальный AI-анализ, не медицинская диагностика. Возможный результат зависит от регулярности занятий и индивидуальных особенностей."
+  },
+  images: {
+    before_image_url: "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 460'><defs><radialGradient id='g' cx='50%' cy='40%' r='55%'><stop offset='0%' stop-color='#f5e6cb'/><stop offset='60%' stop-color='#e6d2af'/><stop offset='100%' stop-color='#cbb88f'/></radialGradient></defs><rect width='400' height='460' fill='url(#g)'/><ellipse cx='200' cy='200' rx='95' ry='120' fill='#d9c2a0' opacity='.85'/><ellipse cx='200' cy='180' rx='75' ry='95' fill='#c9af89' opacity='.55'/><text x='200' y='430' text-anchor='middle' fill='#8a7c68' font-family='monospace' font-size='11' letter-spacing='2'>BEFORE · PLACEHOLDER</text></svg>`),
+    before_object_position: "50% 35%",
+    after_image_url: "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 460'><defs><radialGradient id='g' cx='50%' cy='40%' r='55%'><stop offset='0%' stop-color='#fbf2dd'/><stop offset='60%' stop-color='#eddcb8'/><stop offset='100%' stop-color='#d3bd92'/></radialGradient></defs><rect width='400' height='460' fill='url(#g)'/><ellipse cx='200' cy='200' rx='85' ry='115' fill='#e6cfa6' opacity='.85'/><ellipse cx='200' cy='180' rx='65' ry='90' fill='#dbbd8e' opacity='.55'/><text x='200' y='430' text-anchor='middle' fill='#8a7c68' font-family='monospace' font-size='11' letter-spacing='2'>AFTER · PLACEHOLDER</text></svg>`),
+    after_object_position: "50% 35%"
+  },
+  point_a: {
+    title: "ТОЧКА А",
+    sub: "ВЫ СЕЙЧАС",
+    annotations: [
+      { side: "left", text: "Отёки и припухлость по утрам",     anchor: { x: 38, y: 30 } },
+      { side: "left", text: "Тёмные круги и мешки под глазами", anchor: { x: 42, y: 40 } },
+      { side: "left", text: "Намечаются носогубные складки",    anchor: { x: 44, y: 55 } },
+      { side: "left", text: "Овал лица потерял чёткость",       anchor: { x: 30, y: 72 } },
+      { side: "right", text: "Тусклый, уставший тон кожи",      anchor: { x: 62, y: 38 } },
+      { side: "right", text: "Мышечные зажимы в челюсти",       anchor: { x: 65, y: 65 } },
+      { side: "right", text: "Сутулость и напряжение шеи",      anchor: { x: 70, y: 88 } }
+    ],
+    pains_title: "Ваши боли",
+    pains: [
+      "Не узнаёте себя в зеркале по утрам",
+      "Кажется, что лицо «плывёт» вниз",
+      "Постоянная усталость и отёчность",
+      "Возраст начинает выдавать себя",
+      "Снижается уверенность в себе",
+      "Косметика и салоны не дают результата"
+    ],
+    influence_label: "Как это влияет на жизнь",
+    influence: "Каждое утро начинается с разочарования в зеркале. Энергия и желание выходить в люди падают, появляется привычка прятать лицо за фильтрами и углом съёмки."
+  },
+  point_b: {
+    title: "ТОЧКА B",
+    sub: "ВЫ ПРИОБРЕТАЕТЕ КУРС",
+    eyebrow: "ВЫ ПОЛУЧАЕТЕ СИСТЕМУ",
+    headline: "Не одну технику, а <em>комплексный маршрут</em> к молодому лицу",
+    items: [
+      { icon: "face",     title: "Фейс-массаж и фейсфитнес",       desc: "Точечная работа с каждой зоной лица" },
+      { icon: "drop",     title: "Работа с отёками",               desc: "Лимфодренажные техники и ритуалы" },
+      { icon: "leaf",     title: "Питание и подбор рациона",       desc: "Для молодости и сияния кожи изнутри" },
+      { icon: "posture",  title: "Осанка и работа с телом",        desc: "Снимаем зажимы, открываем лицо" },
+      { icon: "bottle",   title: "Чек-листы по косметике",         desc: "Уход, который реально работает" },
+      { icon: "chat",     title: "Поддержка кураторов",            desc: "Сопровождение и обратная связь" }
+    ],
+    proof: [
+      "Пошаговые видеоуроки в удобном формате",
+      "Готовые программы под ваши задачи",
+      "Фокус на естественном результате",
+      "Только проверенные техники"
+    ],
+    bridge: "Хаотичные упражнения из соцсетей не работают — лицу нужна система. Курс даёт маршрут, по которому идут тысячи учениц."
+  },
+  point_c: {
+    title: "ТОЧКА C",
+    sub: "ВАШ ВОЗМОЖНЫЙ РЕЗУЛЬТАТ",
+    annotations: [
+      { side: "right", text: "Свежий, отдохнувший вид",        anchor: { x: 62, y: 28 } },
+      { side: "right", text: "Уменьшение мешков и тёмных кругов", anchor: { x: 65, y: 40 } },
+      { side: "right", text: "Носогубная складка визуально мягче", anchor: { x: 60, y: 55 } },
+      { side: "right", text: "Овал лица становится чётче",     anchor: { x: 70, y: 72 } },
+      { side: "left", text: "Тон кожи ровнее и сияет",         anchor: { x: 38, y: 38 } },
+      { side: "left", text: "Расслабленные мышцы лица",        anchor: { x: 36, y: 60 } },
+      { side: "left", text: "Прямая осанка, открытая шея",     anchor: { x: 32, y: 88 } }
+    ],
+    results_title: "Ваш результат",
+    results: [
+      "Чёткий овал и подтянутые контуры",
+      "Уходят утренние отёки и мешки",
+      "Кожа выглядит ровнее и свежее",
+      "Носогубные складки визуально мягче",
+      "Возможно, лицо смотрится моложе",
+      "Возвращается уверенность в себе"
+    ],
+    influence_label: "Как это влияет на жизнь",
+    influence: "Утро начинается с улыбки в зеркале. Появляется лёгкость, энергия и желание быть на виду — без фильтров и оправданий."
+  },
+  transformation_path: {
+    a: { title: "Жизнь как раньше", desc: "Усталость, отёки и недовольство собой" },
+    b: { title: "Решение инвестировать в себя", desc: "Вы получаете систему и понятный маршрут" },
+    c: { title: "Новая версия себя", desc: "Каждый день лицо выглядит свежее и легче" }
+  },
+  cta: {
+    quote: "Ваш протокол показывает: <em>результат возможен</em>, если работать системно",
+    primary: "Получить полную программу",
+    secondary: "Разобрать протокол с куратором"
+  }
+};
+
+// ════════════════════════════════════════════════════════════════════
+// SVG ICONS
+// ════════════════════════════════════════════════════════════════════
+const ICONS = {
+  face: '<svg viewBox="0 0 24 24"><path d="M12 4c-4 0-7 3-7 7s3 8 7 8 7-3.5 7-8-3-7-7-7z"/><circle cx="9" cy="11" r=".7" fill="currentColor"/><circle cx="15" cy="11" r=".7" fill="currentColor"/><path d="M10 15c.7.6 1.3.9 2 .9s1.3-.3 2-.9"/></svg>',
+  drop: '<svg viewBox="0 0 24 24"><path d="M12 3c-2 3-5 6-5 10a5 5 0 0 0 10 0c0-4-3-7-5-10z"/><path d="M10 14c0 1.5.8 2.5 2 2.5"/></svg>',
+  leaf: '<svg viewBox="0 0 24 24"><path d="M5 19c0-7 5-13 14-13 0 8-5 14-12 14-1 0-2-1-2-1z"/><path d="M5 19c3-3 6-5 10-7"/></svg>',
+  posture: '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 8v8M9 12h6M10 16l-2 5M14 16l2 5"/></svg>',
+  bottle: '<svg viewBox="0 0 24 24"><path d="M10 3h4v3l1 2v10a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V8l1-2z"/><path d="M9 12h6"/></svg>',
+  chat: '<svg viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 4v-4H6a2 2 0 0 1-2-2z"/><path d="M8 10h8M8 13h5"/></svg>'
+};
+
+// ════════════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════════════
+function $$(root, sel){ return Array.from(root.querySelectorAll(sel)); }
+function setText(root, slot, value){
+  if (value == null) return;
+  root.querySelectorAll(`[data-slot="${slot}"]`).forEach(el => { el.textContent = value; });
+}
+// Limited rich text: allow only <em> tags (for accent words). All other markup escaped.
+function setRich(root, slot, html){
+  if (html == null) return;
+  const sanitized = String(html)
+    .replace(/[<>&]/g, c => ({ "<":"&lt;", ">":"&gt;", "&":"&amp;" }[c]))
+    .replace(/&lt;em&gt;/g, '<em>')
+    .replace(/&lt;\/em&gt;/g, '</em>');
+  root.querySelectorAll(`[data-slot="${slot}"]`).forEach(el => { el.innerHTML = sanitized; });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// setImage — exactly as spec
+// ════════════════════════════════════════════════════════════════════
+function setImage(imgElement, imageUrl, fallbackElement, objectPosition) {
+  if (!imgElement || !fallbackElement) return;
+
+  if (!imageUrl) {
+    imgElement.style.display = "none";
+    fallbackElement.style.display = "flex";
+    return;
+  }
+
+  imgElement.src = imageUrl;
+  imgElement.style.display = "block";
+  fallbackElement.style.display = "none";
+
+  if (objectPosition) {
+    imgElement.style.objectPosition = objectPosition;
+  }
+
+  imgElement.onerror = () => {
+    imgElement.style.display = "none";
+    fallbackElement.style.display = "flex";
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Render HEADER
+// ════════════════════════════════════════════════════════════════════
+function renderHeader(header, brand){
+  document.querySelectorAll(".protocol").forEach(root => {
+    // Brand
+    setText(root, "brand-mark", brand.initial);
+    setText(root, "brand-name", brand.name);
+    setText(root, "brand-sub", brand.tagline);
+    // Title with gold-accent middle word (safe — only structural innerHTML, no user text)
+    root.querySelectorAll('[data-slot="title"]').forEach(el => {
+      el.textContent = "";
+      el.appendChild(document.createTextNode(header.title_main + " "));
+      const em = document.createElement("em");
+      em.textContent = header.title_accent;
+      el.appendChild(em);
+      el.appendChild(document.createTextNode(" " + header.title_tail));
+    });
+    setText(root, "subtitle", header.subtitle);
+
+    // Meta block (right-aligned)
+    root.querySelectorAll('[data-slot="meta"]').forEach(el => {
+      el.textContent = "";
+      const a = document.createElement("strong"); a.textContent = header.meta_top;
+      const b = document.createElement("div"); b.textContent = header.meta_id;
+      const c = document.createElement("div"); c.textContent = header.meta_date;
+      el.append(a, document.createElement("br"), b, c);
+    });
+
+    setText(root, "disclaimer", header.disclaimer);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Render ANNOTATIONS (arrows + labels) over a photo
+// ════════════════════════════════════════════════════════════════════
+function renderAnnotations(svgEl, labelsEl, annotations, isMobile){
+  if (!svgEl || !labelsEl) return;
+  svgEl.innerHTML = "";
+  labelsEl.innerHTML = "";
+
+  const stage = svgEl.parentElement;
+  // photo frame occupies center 42% of stage horizontally
+  const photoLeftPct = 29, photoRightPct = 71;
+
+  annotations.forEach((a, idx) => {
+    const side = a.side === "right" ? "right" : "left";
+    const anchor = a.anchor || { x: 50, y: 50 };
+
+    // Map anchor (relative to photo) to stage coords
+    const stageX = photoLeftPct + (anchor.x / 100) * (photoRightPct - photoLeftPct);
+    const stageY = anchor.y; // 0..100 of stage height
+
+    // Label coords (relative to stage)
+    const labelEdge = side === "left" ? 28 : 72;
+    const vertical = 14 + (idx / Math.max(1, annotations.length - 1)) * 66;
+
+    // ── SVG dot + line ──
+    const ns = "http://www.w3.org/2000/svg";
+    const dotOuter = document.createElementNS(ns, "circle");
+    dotOuter.setAttribute("cx", stageX); dotOuter.setAttribute("cy", stageY);
+    dotOuter.setAttribute("r", "1.4"); dotOuter.setAttribute("class", "dot-outer");
+    svgEl.appendChild(dotOuter);
+
+    const dot = document.createElementNS(ns, "circle");
+    dot.setAttribute("cx", stageX); dot.setAttribute("cy", stageY);
+    dot.setAttribute("r", ".7"); dot.setAttribute("class", "dot");
+    svgEl.appendChild(dot);
+
+    // Elbow line: from dot horizontally to side margin, then vertically
+    const midX = side === "left" ? Math.min(stageX - 6, photoLeftPct - 2) : Math.max(stageX + 6, photoRightPct + 2);
+    const endX = labelEdge;
+
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d",
+      `M ${stageX} ${stageY} L ${midX} ${stageY} L ${endX} ${vertical}`
+    );
+    path.setAttribute("class", "line");
+    svgEl.appendChild(path);
+
+    // tiny tick at label end
+    const tick = document.createElementNS(ns, "circle");
+    tick.setAttribute("cx", endX); tick.setAttribute("cy", vertical);
+    tick.setAttribute("r", ".4"); tick.setAttribute("class", "dot");
+    svgEl.appendChild(tick);
+
+    // ── Label DOM ──
+    const div = document.createElement("div");
+    div.className = "label " + side;
+    div.textContent = a.text;
+    div.style.top = `calc(${vertical}% - 10px)`;
+    if (side === "left"){
+      div.style.left = "0";
+      div.style.maxWidth = isMobile ? "275px" : "27%";
+      div.style.textAlign = "right";
+      div.style.paddingRight = "8px";
+    } else {
+      div.style.right = "0";
+      div.style.maxWidth = isMobile ? "275px" : "27%";
+      div.style.textAlign = "left";
+      div.style.paddingLeft = "8px";
+    }
+    labelsEl.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Render POINT A
+// ════════════════════════════════════════════════════════════════════
+function renderPointA(point, images){
+  document.querySelectorAll(".protocol").forEach(root => {
+    const isMobile = root.dataset.fmt === "mob";
+    setText(root, "a-title", point.title);
+    setText(root, "a-sub", point.sub);
+    setText(root, "a-pains-title", point.pains_title);
+    setText(root, "a-influence-lbl", point.influence_label);
+    setText(root, "a-influence", point.influence);
+
+    // Pains list (safe text)
+    root.querySelectorAll('[data-slot="a-pains"]').forEach(ul => {
+      ul.innerHTML = "";
+      point.pains.forEach(t => {
+        const li = document.createElement("li");
+        const m  = document.createElement("span"); m.className="mark"; m.textContent="✕";
+        const tx = document.createElement("span"); tx.textContent = t;
+        li.append(m, tx);
+        ul.appendChild(li);
+      });
+    });
+
+    // Image
+    const img = root.querySelector('[data-slot="a-img"]');
+    const fb  = root.querySelector('[data-slot="a-fallback"]');
+    setImage(img, images.before_image_url, fb, images.before_object_position);
+
+    // Annotations
+    const svg = root.querySelector('[data-slot="a-arrows"]');
+    const lbl = root.querySelector('[data-slot="a-labels"]');
+    renderAnnotations(svg, lbl, point.annotations || [], isMobile);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Render POINT B
+// ════════════════════════════════════════════════════════════════════
+function renderPointB(point){
+  document.querySelectorAll(".protocol").forEach(root => {
+    setText(root, "b-title", point.title);
+    setText(root, "b-sub", point.sub);
+    setText(root, "b-eyebrow", point.eyebrow);
+    setRich(root, "b-headline", point.headline);
+
+    // Items
+    root.querySelectorAll('[data-slot="b-items"]').forEach(box => {
+      box.innerHTML = "";
+      point.items.forEach(it => {
+        const row = document.createElement("div");
+        row.className = "item";
+        const ico = document.createElement("div"); ico.className="ico";
+        ico.innerHTML = ICONS[it.icon] || ICONS.face;  // structural only
+        const txt = document.createElement("div"); txt.className="txt";
+        const t   = document.createElement("div"); t.className="t";  t.textContent = it.title;
+        const d   = document.createElement("div"); d.className="d";  d.textContent = it.desc;
+        txt.append(t, d);
+        row.append(ico, txt);
+        box.appendChild(row);
+      });
+    });
+
+    // Proof
+    root.querySelectorAll('[data-slot="b-proof"]').forEach(ul => {
+      ul.innerHTML = "";
+      point.proof.forEach(t => {
+        const li = document.createElement("li");
+        const m  = document.createElement("span"); m.className="mark"; m.textContent="✓";
+        const tx = document.createElement("span"); tx.textContent = t;
+        li.append(m, tx);
+        ul.appendChild(li);
+      });
+    });
+
+    setText(root, "b-bridge", point.bridge);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Render POINT C
+// ════════════════════════════════════════════════════════════════════
+function renderPointC(point, images){
+  document.querySelectorAll(".protocol").forEach(root => {
+    const isMobile = root.dataset.fmt === "mob";
+    setText(root, "c-title", point.title);
+    setText(root, "c-sub", point.sub);
+    setText(root, "c-results-title", point.results_title);
+    setText(root, "c-influence-lbl", point.influence_label);
+    setText(root, "c-influence", point.influence);
+
+    root.querySelectorAll('[data-slot="c-results"]').forEach(ul => {
+      ul.innerHTML = "";
+      point.results.forEach(t => {
+        const li = document.createElement("li");
+        const m  = document.createElement("span"); m.className="mark"; m.textContent="✦";
+        const tx = document.createElement("span"); tx.textContent = t;
+        li.append(m, tx);
+        ul.appendChild(li);
+      });
+    });
+
+    const img = root.querySelector('[data-slot="c-img"]');
+    const fb  = root.querySelector('[data-slot="c-fallback"]');
+    setImage(img, images.after_image_url, fb, images.after_object_position);
+
+    const svg = root.querySelector('[data-slot="c-arrows"]');
+    const lbl = root.querySelector('[data-slot="c-labels"]');
+    renderAnnotations(svg, lbl, point.annotations || [], isMobile);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Render TRANSFORMATION PATH
+// ════════════════════════════════════════════════════════════════════
+function renderTransformationPath(path){
+  document.querySelectorAll(".protocol").forEach(root => {
+    setText(root, "path-a-title", path.a.title);
+    setText(root, "path-a-desc",  path.a.desc);
+    setText(root, "path-b-title", path.b.title);
+    setText(root, "path-b-desc",  path.b.desc);
+    setText(root, "path-c-title", path.c.title);
+    setText(root, "path-c-desc",  path.c.desc);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Render CTA
+// ════════════════════════════════════════════════════════════════════
+function renderCTA(cta){
+  document.querySelectorAll(".protocol").forEach(root => {
+    setRich(root, "cta-quote", cta.quote);
+    setText(root, "cta-primary", cta.primary);
+    setText(root, "cta-secondary", cta.secondary);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MAIN renderProtocol
+// ════════════════════════════════════════════════════════════════════
+function renderProtocol(data){
+  renderHeader(data.header, data.brand);
+  renderPointA(data.point_a, data.images);
+  renderPointB(data.point_b);
+  renderPointC(data.point_c, data.images);
+  renderTransformationPath(data.transformation_path);
+  renderCTA(data.cta);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// preloadProtocolImages — backend waits on this before PNG export
+// ════════════════════════════════════════════════════════════════════
+function preloadProtocolImages(){
+  const imgs = Array.from(document.querySelectorAll("img[data-protocol-image]"))
+    .filter(img => img.style.display !== "none" && img.src);
+
+  return Promise.all(imgs.map(img => {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve(true);
+    return new Promise(res => {
+      img.addEventListener("load",  () => res(true),  { once: true });
+      img.addEventListener("error", () => res(false), { once: true });
+      // safety timeout: 8s
+      setTimeout(() => res(false), 8000);
+    });
+  })).then(results => {
+    // Also wait for webfonts so layout is stable for the PNG export
+    if (document.fonts && document.fonts.ready) {
+      return document.fonts.ready.then(() => results);
+    }
+    return results;
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Format switcher (preview only — backend renders both)
+// ════════════════════════════════════════════════════════════════════
+document.getElementById("btn-desk").addEventListener("click", () => {
+  document.body.classList.remove("fmt-mob");
+  document.getElementById("btn-desk").classList.add("active");
+  document.getElementById("btn-mob").classList.remove("active");
+});
+document.getElementById("btn-mob").addEventListener("click", () => {
+  document.body.classList.add("fmt-mob");
+  document.getElementById("btn-mob").classList.add("active");
+  document.getElementById("btn-desk").classList.remove("active");
+});
+
+// ════════════════════════════════════════════════════════════════════
+// Boot
+// ════════════════════════════════════════════════════════════════════
+renderProtocol(protocolData || previewProtocolData);
+window.renderProtocol = renderProtocol;
+window.preloadProtocolImages = preloadProtocolImages;
+</script>
+</body>
+</html>

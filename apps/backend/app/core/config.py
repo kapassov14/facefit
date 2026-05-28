@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     telegram_webhook_drop_pending_updates: bool = False
     telegram_bot_username: str | None = None
 
+    funnel_course_url: str | None = None
+    funnel_installment_url: str | None = None
+    funnel_manager_url: str | None = None
+    funnel_training_video_path: str | None = None
+    funnel_case_media_paths: str | None = None
+
     openai_api_key: str | None = None
     openai_analysis_model: str | None = None
     openai_report_model: str | None = None
@@ -46,6 +52,13 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_model: str | None = None
     gemini_protocol_image_model: str | None = None
+
+    ai_text_provider: str = "gemini"
+    ai_image_provider: str = "openai"
+    ai_analysis_model: str | None = "gemini-2.5-flash-lite"
+    ai_image_model_openai: str | None = None
+    ai_image_model_gemini: str | None = None
+    ai_experiment_mode: bool = False
 
     replicate_api_token: str | None = None
     replicate_flux_model: str | None = None
@@ -81,13 +94,21 @@ class Settings(BaseSettings):
     after_photo_original_weight: float = 0.80
     after_photo_retry_count: int = 1
     after_photo_timeout_seconds: int = 300
+    after_photo_min_visible_diff: float = 2.0
+    after_photo_accept_best_effort: bool = True
+    mediapipe_face_landmarker_model_path: str | None = None
 
     def storage_root(self) -> Path:
         return Path(self.local_storage_path).expanduser().resolve()
 
     @property
     def ai_mock_mode(self) -> bool:
-        return self.ai_force_mock or not (self.openai_api_key and self.openai_analysis_model)
+        if self.ai_force_mock:
+            return True
+        provider = (self.ai_text_provider or "openai").strip().lower()
+        if provider == "gemini":
+            return not bool(self.gemini_api_key and (self.ai_analysis_model or self.gemini_model))
+        return not bool(self.openai_api_key and (self.openai_analysis_model or self.ai_analysis_model))
 
 
 @lru_cache

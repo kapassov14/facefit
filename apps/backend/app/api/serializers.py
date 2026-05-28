@@ -27,8 +27,105 @@ STATUS_LABELS = {
 
 def _clean_text(value: Any, fallback: str = "") -> str:
     text = "" if value is None else str(value)
+    text = re.sub(r"\b[Пп]роблем(а|ы|у|ой|е|ами|ах)?\b", "зона внимания", text)
+    text = re.sub(r"\b[Бб]рыли\b", "снижение чёткости овала", text)
+    text = re.sub(r"\b[Мм]ешки под глазами\b", "отёчность в зоне глаз", text)
+    text = re.sub(r"\b[Нн]ормальная кожа\b", "кожа с ровной плотной базой", text)
+    text = re.sub(r"\b[Нн]ормаль\w+\b", "комбинированная с ровной плотной базой", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text or fallback
+
+
+def _skin_type_title(value: Any) -> str:
+    text = _clean_text(value)
+    lowered = text.lower()
+    if not lowered or lowered in {"normal", "unknown", "none", "не определено", "визуально не определено"}:
+        return "Комбинированная, с ровной плотной базой"
+    if "норм" in lowered:
+        return "Комбинированная, с ровной плотной базой"
+    if "сух" in lowered or "dry" in lowered or "обезвож" in lowered:
+        return "Комбинированная, склонная к обезвоженности" if "комби" in lowered else "Сухая, склонная к обезвоженности"
+    if "жир" in lowered or "oily" in lowered or "t-зон" in lowered or "т-зон" in lowered:
+        return "Комбинированная, активная в T-зоне"
+    if "чувств" in lowered or "sensitive" in lowered or "реактив" in lowered:
+        return "Чувствительная, реактивная"
+    if "комби" in lowered or "смешан" in lowered or "combination" in lowered or "mixed" in lowered:
+        if "ровн" in lowered or "плот" in lowered:
+            return "Комбинированная, с ровной плотной базой"
+        return "Комбинированная, склонная к обезвоженности"
+    return text or "Комбинированная, с ровной плотной базой"
+
+
+def _skin_type_items(title: Any, source: Any, fallback: list[str] | None = None, limit: int = 4) -> list[str]:
+    fallback_items = fallback or [
+        "Плюс: кожа выглядит ровной и хорошо держит каркас лица.",
+        "Зона глаз и центр лица быстрее показывают недосып.",
+        "Увлажнение и мягкий отток поддерживают ровное сияние.",
+    ]
+    raw_items = source if isinstance(source, list) else []
+    result: list[str] = []
+    weak_markers = {
+        "хорошая текстура",
+        "присутствует легкая отечность",
+        "присутствует лёгкая отёчность",
+        "лицо выглядит уставшим",
+        "есть потенциал",
+        "хороший ресурс",
+        "хорошим ресурсом",
+        "эластич",
+        "требует внимания",
+        "лимфодренаж",
+        "работа с тонусом",
+        "более свежий",
+        "отдохнувший вид",
+        "четче овал",
+        "чётче овал",
+        "мягче носогубная",
+        "поддержание тонуса",
+        "улучшение лимфотока",
+        "борьбы с отечностью",
+        "борьбы с отёчностью",
+        "хочется",
+        "отёки по утрам",
+        "отеки по утрам",
+        "овал лица",
+        "линия подбородка",
+    }
+    skin_markers = {
+        "кож",
+        "увлаж",
+        "glass",
+        "каркас",
+        "плот",
+        "ровн",
+        "сиян",
+        "текстур",
+        "t-зон",
+        "т-зон",
+        "себум",
+        "реактив",
+        "сух",
+        "центр лица",
+        "зона глаз",
+    }
+    for item in raw_items:
+        cleaned = _clean_text(item)
+        lowered = cleaned.lower()
+        if (
+            not cleaned
+            or len(cleaned) < 22
+            or any(marker in lowered for marker in weak_markers)
+            or not any(marker in lowered for marker in skin_markers)
+        ):
+            continue
+        if cleaned not in result:
+            result.append(cleaned)
+    for item in fallback_items:
+        if len(result) >= limit:
+            break
+        if item not in result:
+            result.append(item)
+    return result[:limit]
 
 
 def _list(value: Any, fallback: list[str] | None = None, limit: int | None = None) -> list[str]:
@@ -206,8 +303,8 @@ def report_view_model(report: GeneratedReport, settings: BotSettings) -> dict[st
         },
         "summary": {
             "main_conclusion": _clean_text(
-                personal_insight.get("final_personal_summary") or personal_insight.get("main_hook") or protocol_copy.get("final_summary") or analysis_json.get("summary"),
-                "Ваш персональный face-протокол готов.",
+                protocol_copy.get("final_summary") or personal_insight.get("final_personal_summary") or personal_insight.get("main_hook") or analysis_json.get("summary"),
+                "В лице уже есть сильная природная база.",
             ),
             "main_focus": _clean_text(
                 personal_insight.get("main_visual_conflict") or generated_report.get("main_problem") or ", ".join(priority_zones),
@@ -215,7 +312,7 @@ def report_view_model(report: GeneratedReport, settings: BotSettings) -> dict[st
             ),
             "potential": _clean_text(
                 personal_insight.get("main_leverage_point") or generated_report.get("main_potential") or ", ".join(strengths[:2]),
-                "Хороший отклик на регулярную практику",
+                "Снять напряжение и раскрыть природную красоту через систему",
             ),
             "priority_zones": priority_zones,
             "forecast_short": forecast_items[-1] if forecast_items else "8-12 недель: устойчивее овал.",
@@ -226,28 +323,36 @@ def report_view_model(report: GeneratedReport, settings: BotSettings) -> dict[st
             "estimated_range": _clean_text(skin_visual_age.get("estimated_range") or skin_copy.get("value"), "визуально свежий диапазон"),
             "score": _clean_text(skin_copy.get("score"), "78/100"),
             "score_percent": _score_percent(skin_copy.get("score")),
-            "explanation": _clean_text(skin_visual_age.get("explanation") or skin_copy.get("comment"), "Кожа выглядит ресурсной, с мягкими зонами внимания."),
+            "explanation": _clean_text(skin_copy.get("comment") or skin_visual_age.get("explanation"), "Кожа выглядит плотной и ухоженной; свежесть раскрывают взгляд и овал."),
             "improvement_potential": _clean_text(
                 personal_insight.get("main_leverage_point") or analysis_json.get("cta_recommendation"),
-                "Регулярная мягкая практика поможет поддержать свежесть, тонус и линию овала.",
+                "Регулярная мягкая практика помогает поддержать свежесть, тонус и линию овала.",
             ),
         },
         "skin_type": {
-            "title": _clean_text(skin_type.get("type") or skin_type_copy.get("title"), "Комбинированная, склонная к отёчности"),
-            "features": _list(skin_type_copy.get("bullets"), _list(skin_type.get("features"), ["Есть мягкие зоны внимания по тонусу и увлажненности."], 4), 4),
-            "strengths": _list(skin_type.get("strengths"), ["Хорошая плотность кожи.", "Потенциал к свежести после лимфодренажа."], 4),
-            "attention_points": _list(skin_type.get("attention_points"), ["Отёчность по утрам.", "Тонус нижней трети."], 4),
+            "title": _skin_type_title(skin_type_copy.get("title") or skin_type.get("type")),
+            "features": _skin_type_items(skin_type_copy.get("title") or skin_type.get("type"), skin_type_copy.get("bullets") or skin_type.get("features")),
+            "strengths": _skin_type_items(
+                skin_type_copy.get("title") or skin_type.get("type"),
+                skin_type.get("strengths"),
+                ["Плотная ровная кожа — хороший актив лица.", "Кожа хорошо держит контур лица."],
+                4,
+            ),
+            "attention_points": _list(skin_type.get("attention_points"), ["Зона глаз быстрее показывает недосып.", "Тонус нижней трети."], 4),
             "recommendations": _clean_text(generated_report.get("skin_recommendations"), "Мягкий лимфодренаж, регулярный уход и упражнения без перенапряжения."),
         },
         "face_aging": {
-            "face_type": _clean_text(face_aging.get("face_type") or face_aging_copy.get("face_type"), "Овальное лицо, мягкие черты"),
-            "aging_type": _clean_text(morphotype_story.get("type") or face_aging.get("aging_type") or face_aging_copy.get("aging_type"), "Усталый тип старения"),
+            "face_strengths": _clean_text(
+                face_aging_copy.get("face_strengths") or face_aging_copy.get("face_type") or face_aging.get("face_type"),
+                "Форма лица с хорошей скуловой опорой",
+            ),
+            "aging_type": _clean_text(face_aging_copy.get("aging_type") or morphotype_story.get("type") or face_aging.get("aging_type"), "Усталый / смешанный"),
             "explanation": _clean_text(
                 morphotype_story.get("what_is_happening") or morphotype_story.get("why_this_type") or face_aging.get("explanation"),
                 "Главный акцент — мягко снять напряжение, поддержать овал и открыть взгляд.",
             ),
             "forecast": _list(face_aging_copy.get("forecast"), [], 3),
-            "strong_base": _clean_text(face_aging_copy.get("strong_base"), "У лица есть ресурс, который хорошо раскрывается через мягкую регулярную работу."),
+            "strong_base": _clean_text(face_aging_copy.get("strong_base"), "Форма, скулы и пропорции — сильная природная база."),
             "bullets": _list(
                 [
                     morphotype_story.get("why_this_type"),
@@ -262,7 +367,7 @@ def report_view_model(report: GeneratedReport, settings: BotSettings) -> dict[st
         "causes": {
             "intro": _clean_text(
                 protocol_copy.get("why_intro") or morphotype_story.get("what_is_happening"),
-                "Это не минус внешности, а логика вашего типа лица: на свежесть влияют лимфа, мышцы, шея и тонус.",
+                "Это не минус внешности, а логика видимых изменений: на свежесть влияют лимфа, мышцы, шея и тонус.",
             ),
             "items": causes,
             "outro": _clean_text(
@@ -321,6 +426,7 @@ def lead_dict(lead: Lead, include_analyses: bool = False) -> dict:
     data = {
         "id": lead.id,
         "name": lead.name,
+        "age": lead.age,
         "status": lead.status,
         "selected_problems": lead.selected_problems or [],
         "report_opened": lead.report_opened,
@@ -427,8 +533,21 @@ def report_public_dict(report: GeneratedReport, settings: BotSettings) -> dict:
     analysis = report.analysis
     protocol_slides = []
     if analysis:
+        zone_protocol = next(
+            (
+                image.path
+                for image in sorted(analysis.images, key=lambda item: item.created_at or item.id, reverse=True)
+                if image.kind == "face_zone_protocol" and image.status == "completed" and image.path
+            ),
+            None,
+        )
         if analysis.face_protocol_version == "final_v1" and analysis.face_protocol_image_path:
-            protocol_slides = [analysis.face_protocol_image_path]
+            seen_protocols = set()
+            protocol_slides = []
+            for path in [zone_protocol or analysis.face_protocol_image_path, *(analysis.protocol_slide_paths or [])]:
+                if path and path not in seen_protocols:
+                    seen_protocols.add(path)
+                    protocol_slides.append(path)
         elif analysis.protocol_version == "v4":
             protocol_slides = analysis.protocol_slide_paths or []
         else:

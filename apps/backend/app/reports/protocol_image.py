@@ -627,7 +627,7 @@ def _slide_2(output_path: str, user_name: str, analysis_json: dict[str, Any], ba
 
     _editorial_panel(canvas, (88, 374, 992, 560), "01", "Биологический возраст кожи", skin_age_body, ROSE, fill=PAPER)
     _editorial_panel(canvas, (88, 592, 520, 790), "02", "Тип кожи", skin_type_body, SAGE, fill=(252, 248, 243))
-    _editorial_panel(canvas, (560, 592, 992, 790), "03", "Тип лица / старения", face_type_body, GOLD, fill=(255, 250, 245))
+    _editorial_panel(canvas, (560, 592, 992, 790), "03", "Сильные стороны / старение", face_type_body, GOLD, fill=(255, 250, 245))
 
     _shadowed_rounded(canvas, (88, 828, 992, 1158), fill=(255, 253, 250, 242), outline=(184, 157, 124, 170), radius=26, shadow_alpha=12)
     draw = ImageDraw.Draw(canvas)
