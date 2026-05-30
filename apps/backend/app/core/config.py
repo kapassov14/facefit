@@ -78,6 +78,7 @@ class Settings(BaseSettings):
     queue_concurrency: int = 2
     celery_result_expires_seconds: int = 3600
     ai_force_mock: bool = False
+    ai_accept_best_effort: bool = True
     enable_gemini_fallback: bool = True
     enable_after_photo: bool = False
     face_protocol_version: str = "final_v1"

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import re
 from difflib import SequenceMatcher
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+
+logger = logging.getLogger(__name__)
 
 
 AgingTypeId = Literal["muscular", "deformation_edema", "fine_wrinkle", "tired_mixed"]
@@ -2821,7 +2824,7 @@ def validate_forecast_periods(output: dict[str, Any]) -> list[str]:
     return errors
 
 
-def validate_bella_protocol_v4(output: dict[str, Any]) -> dict[str, Any]:
+def validate_bella_protocol_v4(output: dict[str, Any], *, best_effort: bool = False) -> dict[str, Any]:
     errors: list[str] = []
     try:
         output = normalize_protocol_v4_shape(output)
@@ -2851,6 +2854,12 @@ def validate_bella_protocol_v4(output: dict[str, Any]) -> dict[str, Any]:
     for validator in validators:
         errors.extend(validator(output))
     if errors:
+        if best_effort:
+            logger.warning(
+                "bella_protocol_v4 accepted in best-effort mode; soft validation issues: %s",
+                "; ".join(errors[:20]),
+            )
+            return output
         raise ProtocolValidationError(errors)
     return output
 

@@ -14,6 +14,7 @@ from app.ai.aging_knowledge import (
     validate_aging_type_id,
     validate_no_forbidden_phrases,
 )
+from app.core.config import settings
 from app.ai.protocol_v4 import (
     PROTOCOL_VERSION as BELLA_PROTOCOL_V4,
     ProtocolValidationError,
@@ -842,7 +843,7 @@ def strict_report_to_face_analysis(payload: dict[str, Any]) -> dict:
 
 def normalize_analysis_payload(payload: dict[str, Any], *, client_age: int | None = None) -> dict:
     if isinstance(payload, dict) and payload.get("protocol_version") == BELLA_PROTOCOL_V4:
-        validated_v4 = validate_bella_protocol_v4(payload)
+        validated_v4 = validate_bella_protocol_v4(payload, best_effort=settings.ai_accept_best_effort)
         legacy_payload = protocol_v4_to_legacy_payload(validated_v4)
         normalized = FaceAnalysis.model_validate(legacy_payload).model_dump()
         normalized["strict_blocks"] = validated_v4
@@ -878,7 +879,7 @@ def validate_and_sanitize_protocol(result: dict[str, Any]) -> dict[str, Any]:
     import json as _json
 
     if isinstance(result.get("bella_protocol_v4"), dict):
-        validated_v4 = validate_bella_protocol_v4(result["bella_protocol_v4"])
+        validated_v4 = validate_bella_protocol_v4(result["bella_protocol_v4"], best_effort=settings.ai_accept_best_effort)
         result["bella_protocol_v4"] = validated_v4
         result["strict_blocks"] = validated_v4
         result["analysis_context"] = {

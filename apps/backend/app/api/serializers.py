@@ -111,6 +111,7 @@ def _skin_type_items(title: Any, source: Any, fallback: list[str] | None = None,
     }
     for item in raw_items:
         cleaned = _clean_text(item)
+        cleaned = re.sub(r"^\s*плюс\s*[:\-—–]\s*", "", cleaned, flags=re.IGNORECASE)
         lowered = cleaned.lower()
         if (
             not cleaned
@@ -121,12 +122,26 @@ def _skin_type_items(title: Any, source: Any, fallback: list[str] | None = None,
             continue
         if cleaned not in result:
             result.append(cleaned)
-    for item in fallback_items:
-        if len(result) >= limit:
-            break
-        if item not in result:
-            result.append(item)
-    return result[:limit]
+    if not result:
+        for item in fallback_items:
+            if len(result) >= limit:
+                break
+            cleaned_fb = re.sub(r"^\s*плюс\s*[:\-—–]\s*", "", item, flags=re.IGNORECASE)
+            if cleaned_fb not in result:
+                result.append(cleaned_fb)
+    return _dedupe_lines(result)[:limit]
+
+
+def _dedupe_lines(items: list[str]) -> list[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        key = re.sub(r"\s+", " ", re.sub(r"[^0-9a-zа-яё ]", "", item.lower())).strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
 
 
 def _list(value: Any, fallback: list[str] | None = None, limit: int | None = None) -> list[str]:
@@ -134,6 +149,7 @@ def _list(value: Any, fallback: list[str] | None = None, limit: int | None = Non
     result = [_clean_text(item) for item in source if _clean_text(item)]
     if not result and fallback:
         result = fallback[:]
+    result = _dedupe_lines(result)
     return result[:limit] if limit else result
 
 
@@ -210,8 +226,9 @@ def _personal_strengths(personal_insight: dict[str, Any], limit: int = 4) -> lis
             bullet = _clean_text(item.get("short_protocol_bullet") or item.get("trait"))
         else:
             bullet = _clean_text(item)
+        bullet = re.split(r"\s*:?\s*это\s+ресурс", bullet, maxsplit=1, flags=re.IGNORECASE)[0].strip(" .:;—–-")
         if bullet:
-            result.append(bullet)
+            result.append(bullet if bullet.endswith((".", "!", "?")) else bullet + ".")
     return result[:limit]
 
 
@@ -237,23 +254,46 @@ def report_view_model(report: GeneratedReport, settings: BotSettings) -> dict[st
 
     protocol_zones = protocol_copy.get("zones") if isinstance(protocol_copy.get("zones"), list) else []
     analysis_zones = analysis_json.get("zones") if isinstance(analysis_json.get("zones"), list) else []
-    zones_source = analysis_zones or protocol_zones
+    # Набор зон берём из ПРОТОКОЛА (те же зоны/порядок/статусы, что в PNG),
+    # а тексты подтягиваем из analysis_json по номеру зоны (или по label).
+    canonical_zones = protocol_zones or analysis_zones
+    detail_by_num: dict[str, dict[str, Any]] = {}
+    detail_by_label: dict[str, dict[str, Any]] = {}
+    for raw_detail in analysis_zones:
+        if not isinstance(raw_detail, dict):
+            continue
+        if raw_detail.get("number") is not None:
+            detail_by_num[str(raw_detail.get("number"))] = raw_detail
+        detail_label = _clean_text(raw_detail.get("name") or raw_detail.get("label")).lower()
+        if detail_label:
+            detail_by_label[detail_label] = raw_detail
     zones = []
-    for index, raw_zone in enumerate(zones_source, start=1):
+    for index, raw_zone in enumerate(canonical_zones, start=1):
         if not isinstance(raw_zone, dict):
             continue
-        status = _status(raw_zone.get("status"), raw_zone.get("color"))
+        number = raw_zone.get("number") or index
+        label = _clean_text(raw_zone.get("name") or raw_zone.get("label"), f"Зона {index}")
+        detail = detail_by_num.get(str(number)) or detail_by_label.get(label.lower()) or raw_zone
+        status = _status(raw_zone.get("status") or raw_zone.get("color") or detail.get("status"), detail.get("color"))
         zones.append(
             {
-                "number": raw_zone.get("number") or index,
-                "label": _clean_text(raw_zone.get("name") or raw_zone.get("label"), f"Зона {index}"),
+                "number": number,
+                "label": label,
                 "status": status,
                 "status_label": STATUS_LABELS[status],
-                "short_comment": _clean_text(raw_zone.get("short_comment"), STATUS_LABELS[status]),
-                "reason": _clean_text(raw_zone.get("reason"), "На состояние зоны могут влиять тонус мышц, лимфоток, осанка и мимические привычки."),
-                "recommended_focus": _clean_text(raw_zone.get("recommended_focus"), "Мягкая регулярная работа без перенапряжения."),
+                "short_comment": _clean_text(detail.get("short_comment"), STATUS_LABELS[status]),
+                "reason": _clean_text(detail.get("reason"), "На состояние зоны могут влиять тонус мышц, лимфоток, осанка и мимические привычки."),
+                "recommended_focus": _clean_text(detail.get("recommended_focus"), "Мягкая регулярная работа без перенапряжения."),
             }
         )
+
+    seen_focus: set[str] = set()
+    for zone in zones:
+        focus_key = re.sub(r"\s+", " ", zone["recommended_focus"].lower()).strip()
+        if focus_key and focus_key in seen_focus:
+            zone["recommended_focus"] = ""
+        else:
+            seen_focus.add(focus_key)
 
     priority_zones = [zone["label"] for zone in zones if zone["status"] == "priority"] or [zone["label"] for zone in zones[:3]]
     strengths = _list(
